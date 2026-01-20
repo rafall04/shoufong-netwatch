@@ -89,8 +89,8 @@ Script akan otomatis:
 
 ```env
 # NextAuth
-NEXTAUTH_URL="http://your-server-ip:3500"
-NEXTAUTH_SECRET="generate-with-openssl-rand-base64-32"
+AUTH_SECRET="generate-with-openssl-rand-base64-32"
+AUTH_TRUST_HOST=true
 ```
 
 **Generate secret:**
@@ -99,8 +99,8 @@ openssl rand -base64 32
 ```
 
 **Note:** 
-- Tidak perlu DATABASE_URL (SQLite auto-configured di `prisma/devicemap.db`)
-- **MikroTik config diatur via Web UI**, bukan .env!
+- Database: SQLite (hardcoded: `prisma/devicemap.db`)
+- **MikroTik config via Web UI**, bukan .env!
 - Setelah install, login dan ke: **Dashboard > Admin > Config**
 
 ---

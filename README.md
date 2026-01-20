@@ -59,15 +59,15 @@ This will create:
 Copy `.env.example` to `.env` and configure:
 
 ```env
-NEXTAUTH_URL="http://localhost:3500"
-NEXTAUTH_SECRET="your-secret-here"
+AUTH_SECRET="your-secret-here"
+AUTH_TRUST_HOST=true
 ```
 
 Generate secret with: `openssl rand -base64 32`
 
 **Note:** 
-- Tidak perlu DATABASE_URL (SQLite auto-configured)
-- MikroTik config diatur via UI: **Dashboard > Admin > Config**
+- Database: SQLite (hardcoded di schema: `file:./devicemap.db`)
+- MikroTik config: Via Web UI (**Dashboard > Admin > Config**)
 
 ### 6. Run the Development Server
 

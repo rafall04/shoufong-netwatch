@@ -48,15 +48,11 @@ echo "⚙️  Setting up environment variables..."
 if [ ! -f .env ]; then
     cp .env.example .env
     
-    # Generate NEXTAUTH_SECRET
-    NEXTAUTH_SECRET=$(openssl rand -base64 32)
-    
-    # Get server IP
-    SERVER_IP=$(hostname -I | awk '{print $1}')
+    # Generate AUTH_SECRET
+    AUTH_SECRET=$(openssl rand -base64 32)
     
     # Update .env file
-    sed -i "s|NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=\"$NEXTAUTH_SECRET\"|" .env
-    sed -i "s|NEXTAUTH_URL=.*|NEXTAUTH_URL=\"http://$SERVER_IP:3500\"|" .env
+    sed -i "s|AUTH_SECRET=.*|AUTH_SECRET=\"$AUTH_SECRET\"|" .env
     
     echo "✅ Environment file created"
 else

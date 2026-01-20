@@ -21,12 +21,12 @@ Script akan otomatis:
 - Check prerequisites (Node.js, npm, PM2)
 - Install PM2 jika belum ada
 - Install npm packages
-- Generate environment file (NEXTAUTH_SECRET, NEXTAUTH_URL)
+- Generate environment file (AUTH_SECRET)
 - Setup Prisma (SQLite)
 - Build application
 - Start dengan PM2
 
-**Note:** MikroTik config diatur via Web UI setelah install!
+**Note:** MikroTik config via Web UI setelah install!
 
 ## Quick Start
 

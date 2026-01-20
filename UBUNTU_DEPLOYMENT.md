@@ -76,19 +76,19 @@ Isi file `.env` dengan konfigurasi berikut:
 
 ```env
 # NextAuth
-NEXTAUTH_URL="http://your-server-ip:3500"
-NEXTAUTH_SECRET="generate-random-secret-here"
+AUTH_SECRET="generate-random-secret-here"
+AUTH_TRUST_HOST=true
 ```
 
-**Generate NEXTAUTH_SECRET:**
+**Generate AUTH_SECRET:**
 ```bash
 openssl rand -base64 32
 ```
 
 **IMPORTANT:** 
-- Tidak perlu DATABASE_URL (SQLite auto-configured)
-- **MikroTik configuration diatur via Web UI**, BUKAN di .env!
-- Setelah deploy, login ke dashboard dan configure di: **Admin > Config**
+- Database: SQLite (hardcoded di schema: `file:./devicemap.db`)
+- **MikroTik configuration via Web UI**, BUKAN di .env!
+- Setelah deploy, login dan configure di: **Admin > Config**
 
 ### 4. Setup Prisma (SQLite)
 
