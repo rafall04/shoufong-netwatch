@@ -138,21 +138,22 @@ npm test
   - **Straight**: Direct line
   - **Step**: Sharp 90° corners (L-shape, zigzag)
   - **Smooth Step**: Rounded corners (smooth L-shape)
-- **Draggable Waypoints**: 
-  - Enable "Edit Mode" in Connections panel
-  - Drag waypoints to adjust path shape
-  - Click × button on waypoint to remove
-  - Visual feedback with hover effects
+- **Interactive Path Customization**: 
+  - Enable **"🎨 Edit Mode"** in Connections panel
+  - **Click directly on cable** to add waypoint at that position
+  - **Drag waypoint** to adjust path shape (L-shape, zigzag, custom)
+  - **Click × button** on waypoint to remove
+  - Cable automatically bends following waypoints
+  - No need to open modal or input coordinates manually
 - **Enhanced Visualization**:
   - Bright, vibrant colors (Green for UP, Red for DOWN)
   - 3D-like cable effect with shadows and gradients
   - Dual-layer animated flow for active connections
   - Glow effects for better visibility
-- **Custom Waypoints**: Add intermediate points for complex paths
+  - Invisible wide clickable area for easy interaction
 - **Animated Flow**: Shows data flowing when both devices are UP
 - **Status-Based Colors**: Connection color changes based on device status
 - **Connection Management**: View, edit, and delete connections
-- **Edit Connection**: Click edit icon to customize path, add waypoints
 - **Keyboard Shortcut**: Select connection and press Delete to remove
 
 ### Real-Time Monitoring
