@@ -5,19 +5,23 @@ import { useSession } from 'next-auth/react'
 import useSWR from 'swr'
 import ReactFlow, {
   Node,
+  Edge,
   Controls,
   Background,
   BackgroundVariant,
   useNodesState,
   useEdgesState,
   NodeTypes,
+  EdgeTypes,
   MiniMap,
   Panel,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import DeviceNode from '@/components/DeviceNode'
 import LayoutNode from '@/components/LayoutNode'
-import { Plus, Square, Box, Minus, Type, X, Clock, RefreshCw, Info, Router, Tablet, ScanBarcode, Tv, Copy, Eye, Maximize2, Minimize2, Monitor, Laptop, Printer, Video, Server, Smartphone, Network, Wifi, HelpCircle } from 'lucide-react'
+import ConnectionEdge from '@/components/ConnectionEdge'
+import ConnectionFormModal from '@/components/ConnectionFormModal'
+import { Plus, Square, Box, Minus, Type, X, Clock, RefreshCw, Info, Router, Tablet, ScanBarcode, Tv, Copy, Eye, Maximize2, Minimize2, Monitor, Laptop, Printer, Video, Server, Smartphone, Network, Wifi, HelpCircle, Link2, Trash2 } from 'lucide-react'
 import StatusHistoryTimeline from '@/components/StatusHistoryTimeline'
 
 interface Device {
@@ -51,11 +55,24 @@ interface LayoutElement {
   color: string
 }
 
+interface DeviceConnection {
+  id: string
+  sourceId: string
+  targetId: string
+  label?: string | null
+  type: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
+  animated: boolean
+}
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 const nodeTypes: NodeTypes = {
   deviceNode: DeviceNode,
   layoutNode: LayoutNode,
+}
+
+const edgeTypes: EdgeTypes = {
+  connection: ConnectionEdge,
 }
 
 export default function MapContent() {
@@ -80,7 +97,7 @@ export default function MapContent() {
 function MapContentInner() {
   const { data: session } = useSession()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, , onEdgesChange] = useEdgesState([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [showLayoutTools, setShowLayoutTools] = useState(false)
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
   const [devicePopupPosition, setDevicePopupPosition] = useState<{ x: number; y: number } | null>(null)
@@ -94,6 +111,9 @@ function MapContentInner() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [timeSinceUpdate, setTimeSinceUpdate] = useState(0)
+  const [showConnectionModal, setShowConnectionModal] = useState(false)
+  const [preselectedSourceId, setPreselectedSourceId] = useState<string | undefined>(undefined)
+  const [showConnectionsPanel, setShowConnectionsPanel] = useState(false)
   
   const { data, error, mutate } = useSWR<{ devices: Device[] }>('/api/devices', fetcher, {
     refreshInterval: 20000, // Auto refresh every 20 seconds
@@ -105,6 +125,8 @@ function MapContentInner() {
   })
   
   const { data: layoutData, mutate: mutateLayout } = useSWR<{ elements: LayoutElement[] }>('/api/layout', fetcher)
+  
+  const { data: connectionsData, mutate: mutateConnections } = useSWR<{ connections: DeviceConnection[] }>('/api/connections', fetcher)
   
   // Initialize lastUpdate on mount
   useEffect(() => {
@@ -199,6 +221,50 @@ function MapContentInner() {
       alert(`${label} copied!`)
     })
   }
+  
+  // Add connection
+  const handleAddConnection = useCallback(async (data: {
+    sourceId: string
+    targetId: string
+    label?: string
+    type: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
+    animated: boolean
+  }) => {
+    try {
+      const response = await fetch('/api/connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create connection')
+      }
+      
+      mutateConnections()
+    } catch (error: any) {
+      throw error
+    }
+  }, [mutateConnections])
+  
+  // Delete connection
+  const handleDeleteConnection = useCallback(async (connectionId: string) => {
+    if (!confirm('Delete this connection?')) return
+    
+    try {
+      const response = await fetch(`/api/connections?id=${connectionId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        mutateConnections()
+      }
+    } catch (error) {
+      console.error('Error deleting connection:', error)
+    }
+  }, [mutateConnections])
   
   // Add layout element
   const addLayoutElement = useCallback(
@@ -332,9 +398,10 @@ function MapContentInner() {
     [session]
   )
   
-  // Transform data to nodes
+  // Transform data to nodes and edges
   useEffect(() => {
     const flowNodes: Node[] = []
+    const flowEdges: Edge[] = []
     
     if (layoutData?.elements) {
       layoutData.elements.forEach((element) => {
@@ -363,8 +430,13 @@ function MapContentInner() {
       })
     }
     
+    // Create device status map for quick lookup
+    const deviceStatusMap = new Map<string, string>()
+    
     if (data?.devices) {
       data.devices.forEach((device) => {
+        deviceStatusMap.set(device.id, device.status)
+        
         flowNodes.push({
           id: device.id,
           type: 'deviceNode',
@@ -397,8 +469,32 @@ function MapContentInner() {
       })
     }
     
+    // Create edges from connections
+    if (connectionsData?.connections) {
+      connectionsData.connections.forEach((connection) => {
+        const sourceStatus = deviceStatusMap.get(connection.sourceId)
+        const targetStatus = deviceStatusMap.get(connection.targetId)
+        
+        flowEdges.push({
+          id: connection.id,
+          source: connection.sourceId,
+          target: connection.targetId,
+          type: 'connection',
+          data: {
+            label: connection.label,
+            type: connection.type,
+            animated: connection.animated,
+            sourceStatus,
+            targetStatus,
+          },
+          animated: connection.animated && sourceStatus === 'up' && targetStatus === 'up',
+        })
+      })
+    }
+    
     setNodes(flowNodes)
-  }, [data, layoutData, setNodes, session, handleLabelChange, deleteSelectedNode])
+    setEdges(flowEdges)
+  }, [data, layoutData, connectionsData, setNodes, setEdges, session, handleLabelChange, deleteSelectedNode])
   
   if (error) {
     return (
@@ -425,6 +521,7 @@ function MapContentInner() {
         onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         minZoom={0.1}
         maxZoom={4}
@@ -438,6 +535,13 @@ function MapContentInner() {
               if (node.id.startsWith('layout-')) {
                 deleteSelectedNode(node.id)
               }
+            })
+          }
+        }}
+        onEdgesDelete={(edges) => {
+          if (session?.user?.role !== 'VIEWER') {
+            edges.forEach((edge) => {
+              handleDeleteConnection(edge.id)
             })
           }
         }}
@@ -459,6 +563,85 @@ function MapContentInner() {
             )}
           </button>
         </Panel>
+        
+        {/* Connections Button - 8px gap from Fullscreen */}
+        {session?.user?.role !== 'VIEWER' && (
+          <Panel position="top-left" className="bg-white rounded shadow-sm" style={{ marginTop: '176px' }}>
+            <button
+              onClick={() => setShowConnectionsPanel(!showConnectionsPanel)}
+              className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-colors rounded"
+              title="Manage Connections"
+              aria-label="Manage Connections"
+            >
+              <Link2 className="w-4 h-4 text-gray-700" />
+            </button>
+          </Panel>
+        )}
+        
+        {/* Connections Panel */}
+        {showConnectionsPanel && session?.user?.role !== 'VIEWER' && (
+          <Panel position="top-left" className="bg-white rounded shadow-lg" style={{ marginTop: '224px' }}>
+            <div className="p-2 w-64">
+              <div className="flex items-center justify-between pb-1 border-b mb-2">
+                <span className="text-xs font-semibold text-gray-700">Connections</span>
+                <button
+                  onClick={() => setShowConnectionsPanel(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Close"
+                  aria-label="Close panel"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              
+              <button
+                onClick={() => {
+                  setPreselectedSourceId(undefined)
+                  setShowConnectionModal(true)
+                }}
+                className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Connection
+              </button>
+              
+              {connectionsData?.connections && connectionsData.connections.length > 0 ? (
+                <div className="mt-2 space-y-1 max-h-64 overflow-y-auto">
+                  {connectionsData.connections.map((conn) => {
+                    const sourceDevice = data?.devices?.find(d => d.id === conn.sourceId)
+                    const targetDevice = data?.devices?.find(d => d.id === conn.targetId)
+                    
+                    return (
+                      <div key={conn.id} className="p-2 bg-gray-50 rounded text-[10px] space-y-0.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-700">
+                            {sourceDevice?.name || 'Unknown'} → {targetDevice?.name || 'Unknown'}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteConnection(conn.id)}
+                            className="text-red-500 hover:text-red-700 transition-colors"
+                            title="Delete connection"
+                            aria-label="Delete connection"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                        {conn.label && (
+                          <div className="text-gray-500">{conn.label}</div>
+                        )}
+                        <div className="text-gray-400">{conn.type}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="mt-2 text-[10px] text-gray-500 text-center py-4">
+                  No connections yet
+                </div>
+              )}
+            </div>
+          </Panel>
+        )}
         
         <MiniMap position="bottom-right" />
         <Background variant={BackgroundVariant.Dots} />
@@ -707,6 +890,22 @@ function MapContentInner() {
             Copy Name
           </button>
           <div className="border-t my-1"></div>
+          {session?.user?.role !== 'VIEWER' && (
+            <>
+              <button
+                onClick={() => {
+                  setPreselectedSourceId(contextMenu.device.id)
+                  setShowConnectionModal(true)
+                  setContextMenu(null)
+                }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+              >
+                <Link2 className="w-3.5 h-3.5" />
+                Add Connection
+              </button>
+              <div className="border-t my-1"></div>
+            </>
+          )}
           <button
             onClick={() => {
               setSelectedDevice(contextMenu.device)
@@ -804,6 +1003,19 @@ function MapContentInner() {
             />
           </div>
         </div>
+      )}
+      
+      {/* Connection Form Modal */}
+      {showConnectionModal && data?.devices && (
+        <ConnectionFormModal
+          devices={data.devices}
+          onClose={() => {
+            setShowConnectionModal(false)
+            setPreselectedSourceId(undefined)
+          }}
+          onSubmit={handleAddConnection}
+          preselectedSourceId={preselectedSourceId}
+        />
       )}
     </div>
   )
