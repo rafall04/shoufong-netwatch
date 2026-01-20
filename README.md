@@ -138,6 +138,16 @@ npm test
   - **Straight**: Direct line
   - **Step**: Sharp 90° corners (L-shape, zigzag)
   - **Smooth Step**: Rounded corners (smooth L-shape)
+- **Draggable Waypoints**: 
+  - Enable "Edit Mode" in Connections panel
+  - Drag waypoints to adjust path shape
+  - Click × button on waypoint to remove
+  - Visual feedback with hover effects
+- **Enhanced Visualization**:
+  - Bright, vibrant colors (Green for UP, Red for DOWN)
+  - 3D-like cable effect with shadows and gradients
+  - Dual-layer animated flow for active connections
+  - Glow effects for better visibility
 - **Custom Waypoints**: Add intermediate points for complex paths
 - **Animated Flow**: Shows data flowing when both devices are UP
 - **Status-Based Colors**: Connection color changes based on device status
