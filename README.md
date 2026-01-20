@@ -133,9 +133,16 @@ npm test
 ### Device Connections
 - **Add Connections**: Right-click device → "Add Connection"
 - **Connection Types**: Cable, Wireless, Virtual
+- **Path Styles**: 
+  - **Curved**: Smooth bezier curve (default)
+  - **Straight**: Direct line
+  - **Step**: Sharp 90° corners (L-shape, zigzag)
+  - **Smooth Step**: Rounded corners (smooth L-shape)
+- **Custom Waypoints**: Add intermediate points for complex paths
 - **Animated Flow**: Shows data flowing when both devices are UP
 - **Status-Based Colors**: Connection color changes based on device status
 - **Connection Management**: View, edit, and delete connections
+- **Edit Connection**: Click edit icon to customize path, add waypoints
 - **Keyboard Shortcut**: Select connection and press Delete to remove
 
 ### Real-Time Monitoring
