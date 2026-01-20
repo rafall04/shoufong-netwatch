@@ -39,7 +39,7 @@ echo "✅ PM2: $(pm2 --version)"
 
 # Install dependencies
 echo ""
-echo "� InDstalling npm packages..."
+echo "📦 Installing npm packages..."
 npm install
 
 # Setup environment
