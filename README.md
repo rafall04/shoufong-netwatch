@@ -117,9 +117,36 @@ npm test
 - **Database**: SQLite with Prisma ORM
 - **Authentication**: NextAuth.js v5
 - **UI**: Tailwind CSS, Lucide React icons
-- **Map**: React Flow
+- **Map**: React Flow (with device connections and animated flow)
 - **Process Manager**: PM2 (production)
 - **Testing**: Vitest, fast-check (property-based testing)
+
+## ✨ Key Features
+
+### Visual Network Mapping
+- **Interactive Map**: Drag-and-drop device positioning
+- **Device Connections**: Visual lines/cables between devices
+- **Animated Flow**: Real-time animated data flow on connections
+- **Status Colors**: Green (UP), Red (DOWN), Gray (Unknown)
+- **Layout Elements**: Lanes, Rooms, Dividers, Labels
+
+### Device Connections
+- **Add Connections**: Right-click device → "Add Connection"
+- **Connection Types**: Cable, Wireless, Virtual
+- **Animated Flow**: Shows data flowing when both devices are UP
+- **Status-Based Colors**: Connection color changes based on device status
+- **Connection Management**: View, edit, and delete connections
+- **Keyboard Shortcut**: Select connection and press Delete to remove
+
+### Real-Time Monitoring
+- **Auto-Refresh**: Updates every 20 seconds
+- **Manual Refresh**: Sync with MikroTik on-demand
+- **Status History**: 24-hour timeline for each device
+- **Last Seen**: Track when device was last online
+
+### User Management
+- **Role-Based Access**: Admin, Operator, Viewer
+- **Permissions**: Viewers can only view, Operators can edit, Admins can manage users
 
 ## 🌐 Port Configuration
 
