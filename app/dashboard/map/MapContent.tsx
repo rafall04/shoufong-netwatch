@@ -118,6 +118,7 @@ function MapContentInner() {
   const [preselectedSourceId, setPreselectedSourceId] = useState<string | undefined>(undefined)
   const [showConnectionsPanel, setShowConnectionsPanel] = useState(false)
   const [editingConnection, setEditingConnection] = useState<DeviceConnection | null>(null)
+  const [editMode, setEditMode] = useState(false)
   
   const { data, error, mutate } = useSWR<{ devices: Device[] }>('/api/devices', fetcher, {
     refreshInterval: 20000, // Auto refresh every 20 seconds
@@ -298,6 +299,77 @@ function MapContentInner() {
       throw error
     }
   }, [mutateConnections])
+  
+  // Handle waypoint drag
+  const handleWaypointDrag = useCallback(async (
+    connectionId: string,
+    waypointIndex: number,
+    screenX: number,
+    screenY: number
+  ) => {
+    const connection = connectionsData?.connections.find(c => c.id === connectionId)
+    if (!connection) return
+    
+    // Convert screen coordinates to flow coordinates
+    // This is a simplified version - you may need to adjust based on zoom/pan
+    const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
+    
+    if (waypoints[waypointIndex]) {
+      waypoints[waypointIndex] = { x: screenX, y: screenY }
+      
+      await handleUpdateConnection({
+        id: connectionId,
+        label: connection.label || undefined,
+        type: connection.type,
+        animated: connection.animated,
+        edgeType: connection.edgeType,
+        waypoints
+      })
+    }
+  }, [connectionsData, handleUpdateConnection])
+  
+  // Add waypoint to connection
+  const handleAddWaypoint = useCallback(async (
+    connectionId: string,
+    x: number,
+    y: number
+  ) => {
+    const connection = connectionsData?.connections.find(c => c.id === connectionId)
+    if (!connection) return
+    
+    const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
+    waypoints.push({ x, y })
+    
+    await handleUpdateConnection({
+      id: connectionId,
+      label: connection.label || undefined,
+      type: connection.type,
+      animated: connection.animated,
+      edgeType: connection.edgeType,
+      waypoints
+    })
+  }, [connectionsData, handleUpdateConnection])
+  
+  // Remove waypoint from connection
+  const handleRemoveWaypoint = useCallback(async (
+    connectionId: string,
+    waypointIndex: number
+  ) => {
+    const connection = connectionsData?.connections.find(c => c.id === connectionId)
+    if (!connection) return
+    
+    const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
+    waypoints.splice(waypointIndex, 1)
+    
+    await handleUpdateConnection({
+      id: connectionId,
+      label: connection.label || undefined,
+      type: connection.type,
+      animated: connection.animated,
+      edgeType: connection.edgeType,
+      waypoints: waypoints.length > 0 ? waypoints : undefined
+    })
+  }, [connectionsData, handleUpdateConnection])
   
   // Add layout element
   const addLayoutElement = useCallback(
@@ -531,6 +603,16 @@ function MapContentInner() {
             targetStatus,
             edgeType: connection.edgeType,
             waypoints,
+            isEditable: editMode && session?.user?.role !== 'VIEWER',
+            onWaypointDrag: (index: number, x: number, y: number) => {
+              handleWaypointDrag(connection.id, index, x, y)
+            },
+            onAddWaypoint: (x: number, y: number) => {
+              handleAddWaypoint(connection.id, x, y)
+            },
+            onRemoveWaypoint: (index: number) => {
+              handleRemoveWaypoint(connection.id, index)
+            }
           },
           animated: connection.animated && sourceStatus === 'up' && targetStatus === 'up',
         })
@@ -539,7 +621,7 @@ function MapContentInner() {
     
     setNodes(flowNodes)
     setEdges(flowEdges)
-  }, [data, layoutData, connectionsData, setNodes, setEdges, session, handleLabelChange, deleteSelectedNode])
+  }, [data, layoutData, connectionsData, setNodes, setEdges, session, editMode, handleLabelChange, deleteSelectedNode, handleWaypointDrag, handleAddWaypoint, handleRemoveWaypoint])
   
   if (error) {
     return (
@@ -637,6 +719,26 @@ function MapContentInner() {
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
+              </div>
+              
+              {/* Edit Mode Toggle */}
+              <div className="mb-2 p-2 bg-gray-50 rounded">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editMode}
+                    onChange={(e) => setEditMode(e.target.checked)}
+                    className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-gray-700 font-medium">
+                    Edit Mode (Drag Waypoints)
+                  </span>
+                </label>
+                {editMode && (
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Drag waypoints to adjust path. Click × to remove.
+                  </p>
+                )}
               </div>
               
               <button

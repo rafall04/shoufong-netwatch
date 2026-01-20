@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { 
   EdgeProps, 
   getBezierPath, 
@@ -18,6 +18,10 @@ interface ConnectionEdgeData {
   targetStatus?: string
   edgeType?: 'default' | 'straight' | 'step' | 'smoothstep'
   waypoints?: Array<{ x: number; y: number }>
+  onWaypointDrag?: (index: number, x: number, y: number) => void
+  onAddWaypoint?: (x: number, y: number) => void
+  onRemoveWaypoint?: (index: number) => void
+  isEditable?: boolean
 }
 
 export default function ConnectionEdge({
@@ -31,8 +35,12 @@ export default function ConnectionEdge({
   data,
   markerEnd,
 }: EdgeProps<ConnectionEdgeData>) {
+  const [hoveredWaypoint, setHoveredWaypoint] = useState<number | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  
   const edgeType = data?.edgeType || 'default'
   const waypoints = data?.waypoints || []
+  const isEditable = data?.isEditable || false
   
   let edgePath: string
   let labelX: number
@@ -122,7 +130,7 @@ export default function ConnectionEdge({
     }
   }
 
-  // Determine connection status color
+  // Determine connection status color - BRIGHTER COLORS
   const sourceStatus = data?.sourceStatus || 'unknown'
   const targetStatus = data?.targetStatus || 'unknown'
   
@@ -130,53 +138,177 @@ export default function ConnectionEdge({
   const isUp = sourceStatus === 'up' && targetStatus === 'up'
   const isDown = sourceStatus === 'down' || targetStatus === 'down'
   
-  const strokeColor = isUp ? '#10b981' : isDown ? '#ef4444' : '#6b7280'
+  // Brighter, more vibrant colors with gradients
+  const strokeColor = isUp ? '#22c55e' : isDown ? '#f87171' : '#9ca3af'
+  const strokeColorDark = isUp ? '#16a34a' : isDown ? '#dc2626' : '#6b7280'
+  const glowColor = isUp ? '#86efac' : isDown ? '#fca5a5' : '#d1d5db'
+  
   const animated = data?.animated !== false
   
   // Different stroke styles based on connection type
-  const strokeDasharray = data?.type === 'WIRELESS' ? '5 5' : 
-                          data?.type === 'VIRTUAL' ? '2 4' : 
+  const strokeDasharray = data?.type === 'WIRELESS' ? '8 4' : 
+                          data?.type === 'VIRTUAL' ? '4 6' : 
                           undefined
+
+  // Handle waypoint drag
+  const handleWaypointMouseDown = (index: number, e: React.MouseEvent) => {
+    if (!isEditable || !data?.onWaypointDrag) return
+    
+    e.stopPropagation()
+    setIsDragging(true)
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (data?.onWaypointDrag) {
+        data.onWaypointDrag(index, moveEvent.clientX, moveEvent.clientY)
+      }
+    }
+    
+    const handleMouseUp = () => {
+      setIsDragging(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
 
   return (
     <>
-      {/* Main path */}
+      {/* Outer glow/shadow for depth effect */}
+      <path
+        d={edgePath}
+        strokeWidth={8}
+        stroke={glowColor}
+        fill="none"
+        opacity={0.3}
+        className="pointer-events-none"
+      />
+      
+      {/* Dark inner shadow for 3D effect */}
+      <path
+        d={edgePath}
+        strokeWidth={5}
+        stroke={strokeColorDark}
+        fill="none"
+        opacity={0.6}
+        className="pointer-events-none"
+      />
+      
+      {/* Main path with gradient effect */}
+      <defs>
+        <linearGradient id={`gradient-${id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={strokeColor} stopOpacity={1} />
+          <stop offset="50%" stopColor={strokeColorDark} stopOpacity={0.9} />
+          <stop offset="100%" stopColor={strokeColor} stopOpacity={1} />
+        </linearGradient>
+      </defs>
+      
       <path
         id={id}
         className="react-flow__edge-path"
         d={edgePath}
-        strokeWidth={3}
-        stroke={strokeColor}
+        strokeWidth={4}
+        stroke={`url(#gradient-${id})`}
         fill="none"
         markerEnd={markerEnd}
         strokeDasharray={strokeDasharray}
+        style={{
+          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+        }}
       />
       
       {/* Animated overlay for flow effect - lightweight */}
       {animated && isUp && (
-        <path
-          d={edgePath}
-          strokeWidth={3}
-          stroke={strokeColor}
-          fill="none"
-          strokeDasharray="8 8"
-          className="animate-dash"
-          opacity={0.5}
-        />
+        <>
+          {/* Primary flow */}
+          <path
+            d={edgePath}
+            strokeWidth={3}
+            stroke={strokeColor}
+            fill="none"
+            strokeDasharray="12 12"
+            className="animate-dash-fast"
+            opacity={0.7}
+          />
+          
+          {/* Secondary glow flow */}
+          <path
+            d={edgePath}
+            strokeWidth={5}
+            stroke={glowColor}
+            fill="none"
+            strokeDasharray="8 16"
+            className="animate-dash-slow"
+            opacity={0.4}
+          />
+        </>
       )}
       
-      {/* Waypoint markers (visual indicators) */}
+      {/* Waypoint markers - draggable */}
       {waypoints.map((point, index) => (
-        <circle
-          key={`waypoint-${index}`}
-          cx={point.x}
-          cy={point.y}
-          r={4}
-          fill={strokeColor}
-          stroke="white"
-          strokeWidth={2}
-          className="waypoint-marker"
-        />
+        <g key={`waypoint-${index}`}>
+          {/* Outer glow */}
+          <circle
+            cx={point.x}
+            cy={point.y}
+            r={hoveredWaypoint === index ? 10 : 8}
+            fill={glowColor}
+            opacity={0.5}
+            className="pointer-events-none"
+          />
+          
+          {/* Main waypoint */}
+          <circle
+            cx={point.x}
+            cy={point.y}
+            r={hoveredWaypoint === index ? 7 : 6}
+            fill={strokeColor}
+            stroke="white"
+            strokeWidth={2}
+            className={`waypoint-marker ${isEditable ? 'cursor-move' : ''}`}
+            onMouseEnter={() => setHoveredWaypoint(index)}
+            onMouseLeave={() => setHoveredWaypoint(null)}
+            onMouseDown={(e) => handleWaypointMouseDown(index, e)}
+            style={{
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+              transition: 'all 0.2s'
+            }}
+          />
+          
+          {/* Delete button on hover (if editable) */}
+          {isEditable && hoveredWaypoint === index && data?.onRemoveWaypoint && (
+            <g>
+              <circle
+                cx={point.x + 12}
+                cy={point.y - 12}
+                r={8}
+                fill="#ef4444"
+                stroke="white"
+                strokeWidth={2}
+                className="cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  data.onRemoveWaypoint?.(index)
+                }}
+                style={{
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
+                }}
+              />
+              <text
+                x={point.x + 12}
+                y={point.y - 8}
+                textAnchor="middle"
+                fill="white"
+                fontSize="10"
+                fontWeight="bold"
+                className="pointer-events-none"
+              >
+                ×
+              </text>
+            </g>
+          )}
+        </g>
       ))}
       
       {/* Label */}
@@ -190,7 +322,12 @@ export default function ConnectionEdge({
             }}
             className="nodrag nopan"
           >
-            <div className="bg-white px-2 py-0.5 rounded text-[10px] font-medium text-gray-700 border border-gray-200 shadow-sm">
+            <div className="bg-white px-2.5 py-1 rounded-md text-xs font-semibold text-gray-700 border-2 shadow-lg"
+              style={{
+                borderColor: strokeColor,
+                boxShadow: `0 4px 6px rgba(0,0,0,0.1), 0 0 0 2px ${glowColor}`
+              }}
+            >
               {data.label}
             </div>
           </div>
@@ -198,23 +335,32 @@ export default function ConnectionEdge({
       )}
       
       <style jsx>{`
-        @keyframes dash {
+        @keyframes dash-fast {
           to {
-            stroke-dashoffset: -16;
+            stroke-dashoffset: -24;
           }
         }
         
-        .animate-dash {
-          animation: dash 1.5s linear infinite;
+        @keyframes dash-slow {
+          to {
+            stroke-dashoffset: 24;
+          }
+        }
+        
+        .animate-dash-fast {
+          animation: dash-fast 1s linear infinite;
+        }
+        
+        .animate-dash-slow {
+          animation: dash-slow 2s linear infinite;
         }
         
         .waypoint-marker {
-          cursor: pointer;
-          transition: r 0.2s;
+          transition: all 0.2s ease;
         }
         
         .waypoint-marker:hover {
-          r: 6;
+          transform: scale(1.2);
         }
       `}</style>
     </>
