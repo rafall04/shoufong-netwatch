@@ -63,9 +63,8 @@ interface DeviceConnection {
   sourceId: string
   targetId: string
   label?: string | null
-  type: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
+  type: 'LAN' | 'WIRELESS' | 'FIBER_OPTIC'
   animated: boolean
-  edgeType: 'default' | 'straight' | 'step' | 'smoothstep'
   waypoints?: string | null
 }
 
@@ -239,9 +238,8 @@ function MapContentInner() {
     sourceId: string
     targetId: string
     label?: string
-    type: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
+    type: 'LAN' | 'WIRELESS' | 'FIBER_OPTIC'
     animated: boolean
-    edgeType: 'default' | 'straight' | 'step' | 'smoothstep'
   }) => {
     try {
       const response = await fetch('/api/connections', {
@@ -283,9 +281,8 @@ function MapContentInner() {
   const handleUpdateConnection = useCallback(async (data: {
     id: string
     label?: string
-    type: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
+    type: 'LAN' | 'WIRELESS' | 'FIBER_OPTIC'
     animated: boolean
-    edgeType: 'default' | 'straight' | 'step' | 'smoothstep'
     waypoints?: Array<{ x: number; y: number }>
   }) => {
     try {
@@ -333,7 +330,6 @@ function MapContentInner() {
         label: connection.label || undefined,
         type: connection.type,
         animated: connection.animated,
-        edgeType: connection.edgeType,
         waypoints
       })
     }
@@ -358,7 +354,6 @@ function MapContentInner() {
       label: connection.label || undefined,
       type: connection.type,
       animated: connection.animated,
-      edgeType: connection.edgeType,
       waypoints
     })
   }, [connectionsData, handleUpdateConnection])
@@ -379,7 +374,6 @@ function MapContentInner() {
       label: connection.label || undefined,
       type: connection.type,
       animated: connection.animated,
-      edgeType: connection.edgeType,
       waypoints: waypoints.length > 0 ? waypoints : undefined
     })
   }, [connectionsData, handleUpdateConnection])
@@ -614,7 +608,6 @@ function MapContentInner() {
             animated: connection.animated,
             sourceStatus,
             targetStatus,
-            edgeType: connection.edgeType,
             waypoints,
             isEditable: editMode && session?.user?.role !== 'VIEWER',
             onWaypointDrag: (index: number, x: number, y: number) => {
@@ -806,7 +799,7 @@ function MapContentInner() {
                           <div className="text-gray-500">{conn.label}</div>
                         )}
                         <div className="text-gray-400">
-                          {conn.type} • {conn.edgeType}
+                          {conn.type} 
                           {conn.waypoints && ` • ${JSON.parse(conn.waypoints).length} waypoints`}
                         </div>
                       </div>

@@ -17,9 +17,8 @@ interface ConnectionFormModalProps {
     sourceId: string
     targetId: string
     label?: string
-    type: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
+    type: 'LAN' | 'WIRELESS' | 'FIBER_OPTIC'
     animated: boolean
-    edgeType: 'default' | 'straight' | 'step' | 'smoothstep'
   }) => Promise<void>
   preselectedSourceId?: string
 }
@@ -33,9 +32,8 @@ export default function ConnectionFormModal({
   const [sourceId, setSourceId] = useState(preselectedSourceId || '')
   const [targetId, setTargetId] = useState('')
   const [label, setLabel] = useState('')
-  const [type, setType] = useState<'CABLE' | 'WIRELESS' | 'VIRTUAL'>('CABLE')
+  const [type, setType] = useState<'LAN' | 'WIRELESS' | 'FIBER_OPTIC'>('LAN')
   const [animated, setAnimated] = useState(true)
-  const [edgeType, setEdgeType] = useState<'default' | 'straight' | 'step' | 'smoothstep'>('default')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -60,8 +58,7 @@ export default function ConnectionFormModal({
         targetId,
         label: label.trim() || undefined,
         type,
-        animated,
-        edgeType
+        animated
       })
       onClose()
     } catch (err: any) {
@@ -156,19 +153,19 @@ export default function ConnectionFormModal({
             {/* Connection Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Connection Type
+                Cable Type
               </label>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setType('CABLE')}
+                  onClick={() => setType('LAN')}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    type === 'CABLE'
+                    type === 'LAN'
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  Cable
+                  LAN Cable
                 </button>
                 <button
                   type="button"
@@ -183,75 +180,16 @@ export default function ConnectionFormModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setType('VIRTUAL')}
+                  onClick={() => setType('FIBER_OPTIC')}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    type === 'VIRTUAL'
+                    type === 'FIBER_OPTIC'
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  Virtual
+                  Fiber Optic
                 </button>
               </div>
-            </div>
-
-            {/* Edge Type / Path Style */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Path Style
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEdgeType('default')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    edgeType === 'default'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Curved
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEdgeType('straight')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    edgeType === 'straight'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Straight
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEdgeType('step')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    edgeType === 'step'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Step (L-shape)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEdgeType('smoothstep')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    edgeType === 'smoothstep'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Smooth Step
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {edgeType === 'default' && 'Smooth curved path (default)'}
-                {edgeType === 'straight' && 'Direct straight line'}
-                {edgeType === 'step' && 'Sharp 90° corners (L-shape, zigzag)'}
-                {edgeType === 'smoothstep' && 'Rounded corners (smooth L-shape)'}
-              </p>
             </div>
 
             {/* Animated */}

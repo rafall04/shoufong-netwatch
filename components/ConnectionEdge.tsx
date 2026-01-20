@@ -12,11 +12,10 @@ import {
 
 interface ConnectionEdgeData {
   label?: string
-  type?: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
+  type?: 'LAN' | 'WIRELESS' | 'FIBER_OPTIC'
   animated?: boolean
   sourceStatus?: string
   targetStatus?: string
-  edgeType?: 'default' | 'straight' | 'step' | 'smoothstep'
   waypoints?: Array<{ x: number; y: number }>
   onWaypointDrag?: (index: number, x: number, y: number) => void
   onAddWaypoint?: (x: number, y: number) => void
@@ -38,7 +37,6 @@ export default function ConnectionEdge({
   const [hoveredWaypoint, setHoveredWaypoint] = useState<number | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   
-  const edgeType = data?.edgeType || 'default'
   const waypoints = data?.waypoints || []
   const isEditable = data?.isEditable || false
   
@@ -46,30 +44,16 @@ export default function ConnectionEdge({
   let labelX: number
   let labelY: number
   
-  // Generate path based on edge type
+  // Always use straight lines through waypoints
   if (waypoints.length > 0) {
-    // Custom path with waypoints
-    const points = [
-      { x: sourceX, y: sourceY },
-      ...waypoints,
-      { x: targetX, y: targetY }
-    ]
-    
-    // Create smooth path through waypoints
+    // Custom path with waypoints - straight lines
     edgePath = `M ${sourceX} ${sourceY}`
     
-    for (let i = 0; i < points.length - 1; i++) {
-      const current = points[i]
-      const next = points[i + 1]
-      
-      if (i === 0) {
-        // First segment from source
-        edgePath += ` L ${next.x} ${next.y}`
-      } else {
-        // Subsequent segments
-        edgePath += ` L ${next.x} ${next.y}`
-      }
-    }
+    waypoints.forEach((point) => {
+      edgePath += ` L ${point.x} ${point.y}`
+    })
+    
+    edgePath += ` L ${targetX} ${targetY}`
     
     // Calculate label position (middle waypoint or center)
     const midIndex = Math.floor(waypoints.length / 2)
@@ -81,53 +65,10 @@ export default function ConnectionEdge({
       labelY = (sourceY + targetY) / 2
     }
   } else {
-    // Standard paths without waypoints
-    switch (edgeType) {
-      case 'straight':
-        [edgePath, labelX, labelY] = getStraightPath({
-          sourceX,
-          sourceY,
-          targetX,
-          targetY,
-        })
-        break
-      
-      case 'step':
-        [edgePath, labelX, labelY] = getSmoothStepPath({
-          sourceX,
-          sourceY,
-          sourcePosition,
-          targetX,
-          targetY,
-          targetPosition,
-          borderRadius: 0, // Sharp corners for step
-        })
-        break
-      
-      case 'smoothstep':
-        [edgePath, labelX, labelY] = getSmoothStepPath({
-          sourceX,
-          sourceY,
-          sourcePosition,
-          targetX,
-          targetY,
-          targetPosition,
-          borderRadius: 8, // Rounded corners
-        })
-        break
-      
-      case 'default':
-      default:
-        [edgePath, labelX, labelY] = getBezierPath({
-          sourceX,
-          sourceY,
-          sourcePosition,
-          targetX,
-          targetY,
-          targetPosition,
-        })
-        break
-    }
+    // Default: straight line from source to target
+    edgePath = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`
+    labelX = (sourceX + targetX) / 2
+    labelY = (sourceY + targetY) / 2
   }
 
   // Determine connection status color - BRIGHTER COLORS
@@ -147,8 +88,8 @@ export default function ConnectionEdge({
   
   // Different stroke styles based on connection type
   const strokeDasharray = data?.type === 'WIRELESS' ? '8 4' : 
-                          data?.type === 'VIRTUAL' ? '4 6' : 
-                          undefined
+                          data?.type === 'FIBER_OPTIC' ? '2 2' : 
+                          undefined // LAN = solid
 
   // Handle waypoint drag
   const handleWaypointMouseDown = (index: number, e: React.MouseEvent) => {

@@ -9,7 +9,7 @@ interface ConnectionEditModalProps {
     sourceId: string
     targetId: string
     label?: string | null
-    type: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
+    type: 'LAN' | 'WIRELESS' | 'FIBER_OPTIC'
     animated: boolean
     edgeType: 'default' | 'straight' | 'step' | 'smoothstep'
     waypoints?: string | null
@@ -20,9 +20,8 @@ interface ConnectionEditModalProps {
   onSubmit: (data: {
     id: string
     label?: string
-    type: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
+    type: 'LAN' | 'WIRELESS' | 'FIBER_OPTIC'
     animated: boolean
-    edgeType: 'default' | 'straight' | 'step' | 'smoothstep'
     waypoints?: Array<{ x: number; y: number }>
   }) => Promise<void>
 }
@@ -40,9 +39,8 @@ export default function ConnectionEditModal({
     : []
   
   const [label, setLabel] = useState(connection.label || '')
-  const [type, setType] = useState<'CABLE' | 'WIRELESS' | 'VIRTUAL'>(connection.type)
+  const [type, setType] = useState<'LAN' | 'WIRELESS' | 'FIBER_OPTIC'>(connection.type)
   const [animated, setAnimated] = useState(connection.animated)
-  const [edgeType, setEdgeType] = useState<'default' | 'straight' | 'step' | 'smoothstep'>(connection.edgeType)
   const [waypoints, setWaypoints] = useState<Array<{ x: number; y: number }>>(initialWaypoints)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -58,7 +56,6 @@ export default function ConnectionEditModal({
         label: label.trim() || undefined,
         type,
         animated,
-        edgeType,
         waypoints: waypoints.length > 0 ? waypoints : undefined
       })
       onClose()
@@ -135,19 +132,19 @@ export default function ConnectionEditModal({
             {/* Connection Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Connection Type
+                Cable Type
               </label>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setType('CABLE')}
+                  onClick={() => setType('LAN')}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    type === 'CABLE'
+                    type === 'LAN'
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  Cable
+                  LAN Cable
                 </button>
                 <button
                   type="button"
@@ -162,67 +159,14 @@ export default function ConnectionEditModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setType('VIRTUAL')}
+                  onClick={() => setType('FIBER_OPTIC')}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    type === 'VIRTUAL'
+                    type === 'FIBER_OPTIC'
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  Virtual
-                </button>
-              </div>
-            </div>
-
-            {/* Edge Type / Path Style */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Path Style
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEdgeType('default')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    edgeType === 'default'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Curved
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEdgeType('straight')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    edgeType === 'straight'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Straight
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEdgeType('step')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    edgeType === 'step'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Step (L-shape)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEdgeType('smoothstep')}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    edgeType === 'smoothstep'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Smooth Step
+                  Fiber Optic
                 </button>
               </div>
             </div>

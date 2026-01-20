@@ -95,9 +95,8 @@ model DeviceConnection {
   sourceId    String   // Source device ID
   targetId    String   // Target device ID
   label       String?  // Optional label for the connection
-  type        String   @default("CABLE") // CABLE, WIRELESS, VIRTUAL
+  type        String   @default("LAN") // LAN, WIRELESS, FIBER_OPTIC
   animated    Boolean  @default(true) // Show animated flow
-  edgeType    String   @default("default") // default, straight, step, smoothstep
   waypoints   String?  // JSON array of waypoint coordinates [{x, y}, ...]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
