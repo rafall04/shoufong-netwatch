@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useCallback, useState } from 'react'
+import React, { useEffect, useCallback, useState, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import useSWR from 'swr'
 import ReactFlow, {
@@ -15,6 +15,8 @@ import ReactFlow, {
   EdgeTypes,
   MiniMap,
   Panel,
+  useReactFlow,
+  ReactFlowInstance,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import DeviceNode from '@/components/DeviceNode'
@@ -119,6 +121,7 @@ function MapContentInner() {
   const [showConnectionsPanel, setShowConnectionsPanel] = useState(false)
   const [editingConnection, setEditingConnection] = useState<DeviceConnection | null>(null)
   const [editMode, setEditMode] = useState(false)
+  const reactFlowInstance = useReactFlow()
   
   const { data, error, mutate } = useSWR<{ devices: Device[] }>('/api/devices', fetcher, {
     refreshInterval: 20000, // Auto refresh every 20 seconds
@@ -311,11 +314,15 @@ function MapContentInner() {
     if (!connection) return
     
     // Convert screen coordinates to flow coordinates
-    // This is a simplified version - you may need to adjust based on zoom/pan
+    const position = reactFlowInstance.screenToFlowPosition({
+      x: screenX,
+      y: screenY
+    })
+    
     const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
     
     if (waypoints[waypointIndex]) {
-      waypoints[waypointIndex] = { x: screenX, y: screenY }
+      waypoints[waypointIndex] = { x: position.x, y: position.y }
       
       await handleUpdateConnection({
         id: connectionId,
@@ -326,19 +333,21 @@ function MapContentInner() {
         waypoints
       })
     }
-  }, [connectionsData, handleUpdateConnection])
+  }, [connectionsData, reactFlowInstance, handleUpdateConnection])
   
   // Add waypoint to connection
   const handleAddWaypoint = useCallback(async (
     connectionId: string,
-    x: number,
-    y: number
+    flowX: number,
+    flowY: number
   ) => {
     const connection = connectionsData?.connections.find(c => c.id === connectionId)
     if (!connection) return
     
     const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
-    waypoints.push({ x, y })
+    
+    // Add waypoint at the clicked position
+    waypoints.push({ x: flowX, y: flowY })
     
     await handleUpdateConnection({
       id: connectionId,
@@ -607,8 +616,8 @@ function MapContentInner() {
             onWaypointDrag: (index: number, x: number, y: number) => {
               handleWaypointDrag(connection.id, index, x, y)
             },
-            onAddWaypoint: (x: number, y: number) => {
-              handleAddWaypoint(connection.id, x, y)
+            onAddWaypoint: (flowX: number, flowY: number) => {
+              handleAddWaypoint(connection.id, flowX, flowY)
             },
             onRemoveWaypoint: (index: number) => {
               handleRemoveWaypoint(connection.id, index)
@@ -722,7 +731,7 @@ function MapContentInner() {
               </div>
               
               {/* Edit Mode Toggle */}
-              <div className="mb-2 p-2 bg-gray-50 rounded">
+              <div className="mb-2 p-2 bg-blue-50 rounded border border-blue-200">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -730,13 +739,19 @@ function MapContentInner() {
                     onChange={(e) => setEditMode(e.target.checked)}
                     className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <span className="text-xs text-gray-700 font-medium">
-                    Edit Mode (Drag Waypoints)
+                  <span className="text-xs text-blue-900 font-semibold">
+                    🎨 Edit Mode
                   </span>
                 </label>
-                {editMode && (
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    Drag waypoints to adjust path. Click × to remove.
+                {editMode ? (
+                  <div className="text-[10px] text-blue-700 mt-1 space-y-0.5">
+                    <p>✓ Click on cable to add waypoint</p>
+                    <p>✓ Drag waypoint to adjust path</p>
+                    <p>✓ Click × to remove waypoint</p>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-600 mt-1">
+                    Enable to customize cable paths
                   </p>
                 )}
               </div>

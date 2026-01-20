@@ -172,6 +172,27 @@ export default function ConnectionEdge({
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
   }
+  
+  // Handle edge click to add waypoint
+  const handleEdgeClick = (e: React.MouseEvent) => {
+    if (!isEditable || !data?.onAddWaypoint) return
+    
+    e.stopPropagation()
+    
+    // Get click position relative to the SVG
+    const svg = (e.target as SVGElement).ownerSVGElement
+    if (!svg) return
+    
+    const point = svg.createSVGPoint()
+    point.x = e.clientX
+    point.y = e.clientY
+    
+    // Transform to SVG coordinates
+    const svgPoint = point.matrixTransform(svg.getScreenCTM()?.inverse())
+    
+    // Add waypoint at click position
+    data.onAddWaypoint(svgPoint.x, svgPoint.y)
+  }
 
   return (
     <>
@@ -218,6 +239,21 @@ export default function ConnectionEdge({
         }}
       />
       
+      {/* Invisible wide clickable path for adding waypoints */}
+      {isEditable && (
+        <path
+          d={edgePath}
+          strokeWidth={20}
+          stroke="transparent"
+          fill="none"
+          className="cursor-pointer hover:stroke-blue-200 hover:stroke-opacity-30"
+          onClick={handleEdgeClick}
+          style={{
+            transition: 'stroke-opacity 0.2s'
+          }}
+        />
+      )}
+      
       {/* Animated overlay for flow effect - lightweight */}
       {animated && isUp && (
         <>
@@ -228,7 +264,7 @@ export default function ConnectionEdge({
             stroke={strokeColor}
             fill="none"
             strokeDasharray="12 12"
-            className="animate-dash-fast"
+            className="animate-dash-fast pointer-events-none"
             opacity={0.7}
           />
           
@@ -239,7 +275,7 @@ export default function ConnectionEdge({
             stroke={glowColor}
             fill="none"
             strokeDasharray="8 16"
-            className="animate-dash-slow"
+            className="animate-dash-slow pointer-events-none"
             opacity={0.4}
           />
         </>
