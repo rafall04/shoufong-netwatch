@@ -21,7 +21,8 @@ import DeviceNode from '@/components/DeviceNode'
 import LayoutNode from '@/components/LayoutNode'
 import ConnectionEdge from '@/components/ConnectionEdge'
 import ConnectionFormModal from '@/components/ConnectionFormModal'
-import { Plus, Square, Box, Minus, Type, X, Clock, RefreshCw, Info, Router, Tablet, ScanBarcode, Tv, Copy, Eye, Maximize2, Minimize2, Monitor, Laptop, Printer, Video, Server, Smartphone, Network, Wifi, HelpCircle, Link2, Trash2 } from 'lucide-react'
+import ConnectionEditModal from '@/components/ConnectionEditModal'
+import { Plus, Square, Box, Minus, Type, X, Clock, RefreshCw, Info, Router, Tablet, ScanBarcode, Tv, Copy, Eye, Maximize2, Minimize2, Monitor, Laptop, Printer, Video, Server, Smartphone, Network, Wifi, HelpCircle, Link2, Trash2, Edit } from 'lucide-react'
 import StatusHistoryTimeline from '@/components/StatusHistoryTimeline'
 
 interface Device {
@@ -62,6 +63,8 @@ interface DeviceConnection {
   label?: string | null
   type: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
   animated: boolean
+  edgeType: 'default' | 'straight' | 'step' | 'smoothstep'
+  waypoints?: string | null
 }
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -114,6 +117,7 @@ function MapContentInner() {
   const [showConnectionModal, setShowConnectionModal] = useState(false)
   const [preselectedSourceId, setPreselectedSourceId] = useState<string | undefined>(undefined)
   const [showConnectionsPanel, setShowConnectionsPanel] = useState(false)
+  const [editingConnection, setEditingConnection] = useState<DeviceConnection | null>(null)
   
   const { data, error, mutate } = useSWR<{ devices: Device[] }>('/api/devices', fetcher, {
     refreshInterval: 20000, // Auto refresh every 20 seconds
@@ -229,6 +233,7 @@ function MapContentInner() {
     label?: string
     type: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
     animated: boolean
+    edgeType: 'default' | 'straight' | 'step' | 'smoothstep'
   }) => {
     try {
       const response = await fetch('/api/connections', {
@@ -263,6 +268,34 @@ function MapContentInner() {
       }
     } catch (error) {
       console.error('Error deleting connection:', error)
+    }
+  }, [mutateConnections])
+  
+  // Update connection
+  const handleUpdateConnection = useCallback(async (data: {
+    id: string
+    label?: string
+    type: 'CABLE' | 'WIRELESS' | 'VIRTUAL'
+    animated: boolean
+    edgeType: 'default' | 'straight' | 'step' | 'smoothstep'
+    waypoints?: Array<{ x: number; y: number }>
+  }) => {
+    try {
+      const response = await fetch('/api/connections/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update connection')
+      }
+      
+      mutateConnections()
+    } catch (error: any) {
+      throw error
     }
   }, [mutateConnections])
   
@@ -475,6 +508,16 @@ function MapContentInner() {
         const sourceStatus = deviceStatusMap.get(connection.sourceId)
         const targetStatus = deviceStatusMap.get(connection.targetId)
         
+        // Parse waypoints if exists
+        let waypoints: Array<{ x: number; y: number }> | undefined
+        if (connection.waypoints) {
+          try {
+            waypoints = JSON.parse(connection.waypoints)
+          } catch (e) {
+            console.error('Failed to parse waypoints:', e)
+          }
+        }
+        
         flowEdges.push({
           id: connection.id,
           source: connection.sourceId,
@@ -486,6 +529,8 @@ function MapContentInner() {
             animated: connection.animated,
             sourceStatus,
             targetStatus,
+            edgeType: connection.edgeType,
+            waypoints,
           },
           animated: connection.animated && sourceStatus === 'up' && targetStatus === 'up',
         })
@@ -614,22 +659,35 @@ function MapContentInner() {
                     return (
                       <div key={conn.id} className="p-2 bg-gray-50 rounded text-[10px] space-y-0.5">
                         <div className="flex items-center justify-between">
-                          <span className="font-medium text-gray-700">
+                          <span className="font-medium text-gray-700 flex-1">
                             {sourceDevice?.name || 'Unknown'} → {targetDevice?.name || 'Unknown'}
                           </span>
-                          <button
-                            onClick={() => handleDeleteConnection(conn.id)}
-                            className="text-red-500 hover:text-red-700 transition-colors"
-                            title="Delete connection"
-                            aria-label="Delete connection"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setEditingConnection(conn)}
+                              className="text-blue-500 hover:text-blue-700 transition-colors"
+                              title="Edit connection"
+                              aria-label="Edit connection"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteConnection(conn.id)}
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                              title="Delete connection"
+                              aria-label="Delete connection"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                         {conn.label && (
                           <div className="text-gray-500">{conn.label}</div>
                         )}
-                        <div className="text-gray-400">{conn.type}</div>
+                        <div className="text-gray-400">
+                          {conn.type} • {conn.edgeType}
+                          {conn.waypoints && ` • ${JSON.parse(conn.waypoints).length} waypoints`}
+                        </div>
                       </div>
                     )
                   })}
@@ -1015,6 +1073,23 @@ function MapContentInner() {
           }}
           onSubmit={handleAddConnection}
           preselectedSourceId={preselectedSourceId}
+        />
+      )}
+      
+      {/* Connection Edit Modal */}
+      {editingConnection && data?.devices && (
+        <ConnectionEditModal
+          connection={editingConnection}
+          sourceDevice={
+            data.devices.find(d => d.id === editingConnection.sourceId) || 
+            { name: 'Unknown', ip: 'N/A' }
+          }
+          targetDevice={
+            data.devices.find(d => d.id === editingConnection.targetId) || 
+            { name: 'Unknown', ip: 'N/A' }
+          }
+          onClose={() => setEditingConnection(null)}
+          onSubmit={handleUpdateConnection}
         />
       )}
     </div>

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { sourceId, targetId, label, type, animated } = body
+    const { sourceId, targetId, label, type, animated, edgeType } = body
 
     // Validate required fields
     if (!sourceId || !targetId) {
@@ -82,7 +82,9 @@ export async function POST(request: NextRequest) {
         targetId,
         label: label || null,
         type: type || 'CABLE',
-        animated: animated !== undefined ? animated : true
+        animated: animated !== undefined ? animated : true,
+        edgeType: edgeType || 'default',
+        waypoints: null // Will be set later via edit
       }
     })
 

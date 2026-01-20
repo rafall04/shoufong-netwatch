@@ -1,7 +1,14 @@
 'use client'
 
 import React from 'react'
-import { EdgeProps, getBezierPath, EdgeLabelRenderer } from 'reactflow'
+import { 
+  EdgeProps, 
+  getBezierPath, 
+  getStraightPath,
+  getSmoothStepPath,
+  EdgeLabelRenderer,
+  Position
+} from 'reactflow'
 
 interface ConnectionEdgeData {
   label?: string
@@ -9,6 +16,8 @@ interface ConnectionEdgeData {
   animated?: boolean
   sourceStatus?: string
   targetStatus?: string
+  edgeType?: 'default' | 'straight' | 'step' | 'smoothstep'
+  waypoints?: Array<{ x: number; y: number }>
 }
 
 export default function ConnectionEdge({
@@ -22,14 +31,96 @@ export default function ConnectionEdge({
   data,
   markerEnd,
 }: EdgeProps<ConnectionEdgeData>) {
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  })
+  const edgeType = data?.edgeType || 'default'
+  const waypoints = data?.waypoints || []
+  
+  let edgePath: string
+  let labelX: number
+  let labelY: number
+  
+  // Generate path based on edge type
+  if (waypoints.length > 0) {
+    // Custom path with waypoints
+    const points = [
+      { x: sourceX, y: sourceY },
+      ...waypoints,
+      { x: targetX, y: targetY }
+    ]
+    
+    // Create smooth path through waypoints
+    edgePath = `M ${sourceX} ${sourceY}`
+    
+    for (let i = 0; i < points.length - 1; i++) {
+      const current = points[i]
+      const next = points[i + 1]
+      
+      if (i === 0) {
+        // First segment from source
+        edgePath += ` L ${next.x} ${next.y}`
+      } else {
+        // Subsequent segments
+        edgePath += ` L ${next.x} ${next.y}`
+      }
+    }
+    
+    // Calculate label position (middle waypoint or center)
+    const midIndex = Math.floor(waypoints.length / 2)
+    if (waypoints[midIndex]) {
+      labelX = waypoints[midIndex].x
+      labelY = waypoints[midIndex].y
+    } else {
+      labelX = (sourceX + targetX) / 2
+      labelY = (sourceY + targetY) / 2
+    }
+  } else {
+    // Standard paths without waypoints
+    switch (edgeType) {
+      case 'straight':
+        [edgePath, labelX, labelY] = getStraightPath({
+          sourceX,
+          sourceY,
+          targetX,
+          targetY,
+        })
+        break
+      
+      case 'step':
+        [edgePath, labelX, labelY] = getSmoothStepPath({
+          sourceX,
+          sourceY,
+          sourcePosition,
+          targetX,
+          targetY,
+          targetPosition,
+          borderRadius: 0, // Sharp corners for step
+        })
+        break
+      
+      case 'smoothstep':
+        [edgePath, labelX, labelY] = getSmoothStepPath({
+          sourceX,
+          sourceY,
+          sourcePosition,
+          targetX,
+          targetY,
+          targetPosition,
+          borderRadius: 8, // Rounded corners
+        })
+        break
+      
+      case 'default':
+      default:
+        [edgePath, labelX, labelY] = getBezierPath({
+          sourceX,
+          sourceY,
+          sourcePosition,
+          targetX,
+          targetY,
+          targetPosition,
+        })
+        break
+    }
+  }
 
   // Determine connection status color
   const sourceStatus = data?.sourceStatus || 'unknown'
@@ -41,6 +132,11 @@ export default function ConnectionEdge({
   
   const strokeColor = isUp ? '#10b981' : isDown ? '#ef4444' : '#6b7280'
   const animated = data?.animated !== false
+  
+  // Different stroke styles based on connection type
+  const strokeDasharray = data?.type === 'WIRELESS' ? '5 5' : 
+                          data?.type === 'VIRTUAL' ? '2 4' : 
+                          undefined
 
   return (
     <>
@@ -49,24 +145,39 @@ export default function ConnectionEdge({
         id={id}
         className="react-flow__edge-path"
         d={edgePath}
-        strokeWidth={2}
+        strokeWidth={3}
         stroke={strokeColor}
         fill="none"
         markerEnd={markerEnd}
+        strokeDasharray={strokeDasharray}
       />
       
       {/* Animated overlay for flow effect - lightweight */}
       {animated && isUp && (
         <path
           d={edgePath}
-          strokeWidth={2}
+          strokeWidth={3}
           stroke={strokeColor}
           fill="none"
-          strokeDasharray="5 5"
+          strokeDasharray="8 8"
           className="animate-dash"
-          opacity={0.6}
+          opacity={0.5}
         />
       )}
+      
+      {/* Waypoint markers (visual indicators) */}
+      {waypoints.map((point, index) => (
+        <circle
+          key={`waypoint-${index}`}
+          cx={point.x}
+          cy={point.y}
+          r={4}
+          fill={strokeColor}
+          stroke="white"
+          strokeWidth={2}
+          className="waypoint-marker"
+        />
+      ))}
       
       {/* Label */}
       {data?.label && (
@@ -89,12 +200,21 @@ export default function ConnectionEdge({
       <style jsx>{`
         @keyframes dash {
           to {
-            stroke-dashoffset: -10;
+            stroke-dashoffset: -16;
           }
         }
         
         .animate-dash {
-          animation: dash 1s linear infinite;
+          animation: dash 1.5s linear infinite;
+        }
+        
+        .waypoint-marker {
+          cursor: pointer;
+          transition: r 0.2s;
+        }
+        
+        .waypoint-marker:hover {
+          r: 6;
         }
       `}</style>
     </>

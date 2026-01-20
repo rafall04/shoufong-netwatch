@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, label, type, animated } = body
+    const { id, label, type, animated, edgeType, waypoints } = body
 
     if (!id) {
       return NextResponse.json(
@@ -25,7 +25,11 @@ export async function POST(request: NextRequest) {
       data: {
         ...(label !== undefined && { label }),
         ...(type !== undefined && { type }),
-        ...(animated !== undefined && { animated })
+        ...(animated !== undefined && { animated }),
+        ...(edgeType !== undefined && { edgeType }),
+        ...(waypoints !== undefined && { 
+          waypoints: waypoints ? JSON.stringify(waypoints) : null 
+        })
       }
     })
 
