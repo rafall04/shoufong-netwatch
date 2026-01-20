@@ -16,7 +16,7 @@ import ReactFlow, {
   MiniMap,
   Panel,
   useReactFlow,
-  ReactFlowInstance,
+  ReactFlowProvider,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import DeviceNode from '@/components/DeviceNode'
@@ -96,7 +96,11 @@ export default function MapContent() {
     )
   }
   
-  return <MapContentInner />
+  return (
+    <ReactFlowProvider>
+      <MapContentInner />
+    </ReactFlowProvider>
+  )
 }
 
 function MapContentInner() {
