@@ -8,6 +8,8 @@
 *.db
 *.db-journal
 test.db
+test-output.txt
+test-results.log
 
 # Next.js
 /.next/
