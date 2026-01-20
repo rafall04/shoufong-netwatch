@@ -64,10 +64,9 @@ else
 fi
 
 echo ""
-echo "⚠️  Please edit .env file to configure MikroTik connection:"
-echo "   nano .env"
-echo "   Update: MIKROTIK_IP, MIKROTIK_USER, MIKROTIK_PASS"
-read -p "Press Enter to continue after editing .env..."
+echo "⚠️  MikroTik configuration:"
+echo "   Configure via web UI after installation"
+echo "   Dashboard > Admin > Config"
 
 # Setup Prisma
 echo ""

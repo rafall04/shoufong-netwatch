@@ -21,10 +21,12 @@ Script akan otomatis:
 - Check prerequisites (Node.js, npm, PM2)
 - Install PM2 jika belum ada
 - Install npm packages
-- Generate environment file
+- Generate environment file (NEXTAUTH_SECRET, NEXTAUTH_URL)
 - Setup Prisma (SQLite)
 - Build application
 - Start dengan PM2
+
+**Note:** MikroTik config diatur via Web UI setelah install!
 
 ## Quick Start
 
@@ -80,6 +82,6 @@ pm2 monit
 - Default port: **3500**
 - Database: **SQLite** (prisma/devicemap.db)
 - Process Manager: **PM2** (bukan systemd)
-- Make sure to edit `.env` file with your MikroTik credentials before starting
+- MikroTik config: **Via Web UI** (Dashboard > Admin > Config)
 - Node.js 18+ and PM2 must be already installed
 - No PostgreSQL required (menggunakan SQLite)

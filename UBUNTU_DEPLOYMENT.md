@@ -78,11 +78,6 @@ Isi file `.env` dengan konfigurasi berikut:
 # NextAuth
 NEXTAUTH_URL="http://your-server-ip:3500"
 NEXTAUTH_SECRET="generate-random-secret-here"
-
-# MikroTik Configuration
-MIKROTIK_IP="192.168.88.1"
-MIKROTIK_USER="admin"
-MIKROTIK_PASS="your-mikrotik-password"
 ```
 
 **Generate NEXTAUTH_SECRET:**
@@ -90,7 +85,10 @@ MIKROTIK_PASS="your-mikrotik-password"
 openssl rand -base64 32
 ```
 
-**Note:** Tidak perlu DATABASE_URL karena menggunakan SQLite (file: `prisma/devicemap.db`)
+**IMPORTANT:** 
+- Tidak perlu DATABASE_URL (SQLite auto-configured)
+- **MikroTik configuration diatur via Web UI**, BUKAN di .env!
+- Setelah deploy, login ke dashboard dan configure di: **Admin > Config**
 
 ### 4. Setup Prisma (SQLite)
 

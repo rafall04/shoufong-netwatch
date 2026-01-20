@@ -61,12 +61,13 @@ Copy `.env.example` to `.env` and configure:
 ```env
 NEXTAUTH_URL="http://localhost:3500"
 NEXTAUTH_SECRET="your-secret-here"
-MIKROTIK_IP="192.168.88.1"
-MIKROTIK_USER="admin"
-MIKROTIK_PASS="your-password"
 ```
 
-**Note:** Tidak perlu DATABASE_URL karena menggunakan SQLite (file: `prisma/devicemap.db`)
+Generate secret with: `openssl rand -base64 32`
+
+**Note:** 
+- Tidak perlu DATABASE_URL (SQLite auto-configured)
+- MikroTik config diatur via UI: **Dashboard > Admin > Config**
 
 ### 6. Run the Development Server
 

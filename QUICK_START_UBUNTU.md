@@ -91,14 +91,17 @@ Script akan otomatis:
 # NextAuth
 NEXTAUTH_URL="http://your-server-ip:3500"
 NEXTAUTH_SECRET="generate-with-openssl-rand-base64-32"
-
-# MikroTik
-MIKROTIK_IP="192.168.88.1"
-MIKROTIK_USER="admin"
-MIKROTIK_PASS="your-mikrotik-password"
 ```
 
-**Note:** Tidak perlu DATABASE_URL karena menggunakan SQLite (file: `prisma/devicemap.db`)
+**Generate secret:**
+```bash
+openssl rand -base64 32
+```
+
+**Note:** 
+- Tidak perlu DATABASE_URL (SQLite auto-configured di `prisma/devicemap.db`)
+- **MikroTik config diatur via Web UI**, bukan .env!
+- Setelah install, login dan ke: **Dashboard > Admin > Config**
 
 ---
 
