@@ -1,0 +1,53 @@
+{
+  "name": "mikrotik-netwatch-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "scripts": {
+    "dev": "next dev -p 3500",
+    "build": "next build",
+    "start": "next start -p 3500",
+    "lint": "next lint",
+    "worker": "tsx worker.ts",
+    "test": "vitest --run",
+    "test:single": "vitest --run --bail=1",
+    "test:verbose": "vitest --run --reporter=verbose"
+  },
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.7.4",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "lucide-react": "^0.460.0",
+    "next": "^14.2.0",
+    "next-auth": "^5.0.0-beta.25",
+    "node-routeros": "^1.6.9",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "reactflow": "^11.11.0",
+    "source-map-support": "^0.5.21",
+    "swr": "^2.2.5"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitest/ui": "^2.1.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0",
+    "fast-check": "^3.22.0",
+    "jsdom": "^24.0.0",
+    "postcss": "^8.4.0",
+    "prisma": "^5.20.0",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

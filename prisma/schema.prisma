@@ -1,0 +1,90 @@
+// Prisma schema for MikroTik Netwatch Visual Dashboard
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./devicemap.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // bcrypt hashed
+  name      String
+  role      String   @default("VIEWER") // ADMIN, OPERATOR, VIEWER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemConfig {
+  id                      Int      @id @default(1)
+  pollingInterval         Int      @default(30) // seconds
+  mikrotikIp              String   @default("")
+  mikrotikUser            String   @default("")
+  mikrotikPass            String   @default("") // encrypted
+  mikrotikPort            Int      @default(8728)
+  defaultNetwatchTimeout  Int      @default(1000) // milliseconds (default for new devices)
+  defaultNetwatchInterval Int      @default(5) // seconds (default for new devices)
+  updatedAt               DateTime @updatedAt
+}
+
+model Device {
+  id              String     @id @default(cuid())
+  ip              String     @unique
+  name            String
+  type            String     // ROUTER, SWITCH, ACCESS_POINT, PC, LAPTOP, TABLET, PRINTER, SCANNER_GTEX, SMART_TV, CCTV, SERVER, PHONE, OTHER
+  laneName        String
+  roomId          String?    // Foreign key to Room
+  room            Room?      @relation(fields: [roomId], references: [id])
+  status          String     @default("unknown") // "up", "down", "unknown"
+  positionX       Float      @default(0)
+  positionY       Float      @default(0)
+  lastSeen        DateTime?
+  statusSince     DateTime?  // When status last changed
+  // Netwatch Configuration (MikroTik ICMP only)
+  netwatchTimeout Int        @default(1000) // milliseconds (default: 1000ms = 1s)
+  netwatchInterval Int       @default(5)    // seconds (default: 5s)
+  netwatchUpScript String?   // Optional script to run when device goes up
+  netwatchDownScript String? // Optional script to run when device goes down
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Room {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String   @default("#3b82f6") // Default blue
+  devices     Device[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LayoutElement {
+  id        String   @id @default(cuid())
+  type      String   // LANE, ROOM, DIVIDER, LABEL
+  label     String   @default("")
+  laneType  String?  // IN, OUT, BOTH (only for LANE type)
+  positionX Float
+  positionY Float
+  width     Float    @default(200)
+  height    Float    @default(100)
+  color     String   @default("#e5e7eb") // gray-200
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Status history for devices - track UP/DOWN changes over time
+model DeviceStatusHistory {
+  id        String   @id @default(cuid())
+  deviceId  String   // Device ID (not FK to allow history retention if device deleted)
+  deviceIp  String   // Store IP for reference
+  status    String   // "up" or "down"
+  timestamp DateTime @default(now())
+  
+  @@index([deviceId, timestamp])
+  @@index([timestamp])
+}
