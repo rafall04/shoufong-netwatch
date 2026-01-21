@@ -381,6 +381,35 @@ function MapContentInner() {
     })
   }, [connectionsData, handleUpdateConnection])
   
+  // Handle waypoint label change
+  const handleWaypointLabelChange = useCallback(async (
+    connectionId: string,
+    waypointIndex: number,
+    label: string
+  ) => {
+    if (!connectionsData?.connections) return
+    
+    const connection = connectionsData.connections.find(c => c.id === connectionId)
+    if (!connection) return
+    
+    const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
+    
+    if (waypoints[waypointIndex]) {
+      // Add or update label
+      waypoints[waypointIndex].label = label || undefined
+      
+      await handleUpdateConnection({
+        id: connectionId,
+        label: connection.label || undefined,
+        type: connection.type,
+        animated: connection.animated,
+        waypoints
+      })
+      
+      mutateConnections()
+    }
+  }, [connectionsData, handleUpdateConnection, mutateConnections])
+  
   // Remove waypoint from connection
   const handleRemoveWaypoint = useCallback(async (
     connectionId: string,
@@ -636,6 +665,9 @@ function MapContentInner() {
             onWaypointDrag: (index: number, x: number, y: number, isDragEnd: boolean) => {
               handleWaypointDrag(connection.id, index, x, y, isDragEnd)
             },
+            onWaypointLabelChange: (index: number, label: string) => {
+              handleWaypointLabelChange(connection.id, index, label)
+            },
             onAddWaypoint: (flowX: number, flowY: number) => {
               handleAddWaypoint(connection.id, flowX, flowY)
             },
@@ -650,7 +682,7 @@ function MapContentInner() {
     
     setNodes(flowNodes)
     setEdges(flowEdges)
-  }, [data, layoutData, connectionsData, setNodes, setEdges, session, editMode, handleLabelChange, deleteSelectedNode, handleWaypointDrag, handleAddWaypoint, handleRemoveWaypoint])
+  }, [data, layoutData, connectionsData, setNodes, setEdges, session, editMode, handleLabelChange, deleteSelectedNode, handleWaypointDrag, handleWaypointLabelChange, handleAddWaypoint, handleRemoveWaypoint])
   
   if (error) {
     return (
