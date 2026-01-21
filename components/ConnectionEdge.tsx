@@ -41,6 +41,19 @@ export default function ConnectionEdge({
   const waypoints = data?.waypoints || []
   const isEditable = data?.isEditable || false
   
+  // Debug: Log component props on mount and when waypoints change
+  useEffect(() => {
+    console.log('=== ConnectionEdge Component Debug ===')
+    console.log('Edge ID:', id)
+    console.log('Waypoints count:', waypoints.length)
+    console.log('Waypoints data:', waypoints)
+    console.log('isEditable:', isEditable)
+    console.log('onRemoveWaypoint exists:', !!data?.onRemoveWaypoint)
+    console.log('onAddWaypoint exists:', !!data?.onAddWaypoint)
+    console.log('onWaypointDrag exists:', !!data?.onWaypointDrag)
+    console.log('=====================================')
+  }, [id, waypoints, isEditable, data])
+  
   // Detect if device supports hover (desktop) or touch (mobile)
   const [isTouchDevice, setIsTouchDevice] = useState(false)
   
@@ -188,28 +201,63 @@ export default function ConnectionEdge({
 
   // Handle waypoint removal via delete button - with native confirmation
   const handleDeleteClick = useCallback((e: React.MouseEvent, index: number) => {
+    console.log('=== DELETE WAYPOINT DEBUG START ===')
+    console.log('1. Delete button clicked for waypoint index:', index)
+    console.log('2. Event type:', e.type)
+    console.log('3. isEditable:', isEditable)
+    console.log('4. data exists:', !!data)
+    console.log('5. onRemoveWaypoint exists:', !!data?.onRemoveWaypoint)
+    console.log('6. Total waypoints before delete:', waypoints.length)
+    console.log('7. Waypoint to delete:', waypoints[index])
+    
     // CRITICAL: Stop propagation immediately
     e.stopPropagation()
     e.preventDefault()
+    console.log('8. Event propagation stopped')
     
-    if (!isEditable || !data?.onRemoveWaypoint) return
+    if (!isEditable) {
+      console.log('❌ DELETE FAILED: Not editable')
+      console.log('=== DELETE WAYPOINT DEBUG END ===')
+      return
+    }
+    
+    if (!data?.onRemoveWaypoint) {
+      console.log('❌ DELETE FAILED: onRemoveWaypoint function not provided')
+      console.log('=== DELETE WAYPOINT DEBUG END ===')
+      return
+    }
     
     // Show native browser confirmation dialog
+    console.log('9. Showing confirmation dialog...')
     const confirmed = window.confirm(
       'Apakah Anda yakin ingin menghapus waypoint ini?\n\nTindakan ini tidak dapat dibatalkan.'
     )
     
+    console.log('10. User confirmation result:', confirmed)
+    
     if (confirmed) {
+      console.log('11. User confirmed deletion, proceeding...')
+      
       // Clear states first
       setHoveredWaypoint(null)
       setSelectedWaypoint(null)
       setDraggingWaypoint(null)
+      console.log('12. States cleared')
       
       // Remove the waypoint immediately
-      console.log('Deleting waypoint at index:', index)
-      data.onRemoveWaypoint(index)
+      console.log('13. Calling data.onRemoveWaypoint with index:', index)
+      try {
+        data.onRemoveWaypoint(index)
+        console.log('✅ DELETE SUCCESS: onRemoveWaypoint called successfully')
+      } catch (error) {
+        console.error('❌ DELETE ERROR:', error)
+      }
+    } else {
+      console.log('❌ DELETE CANCELLED: User cancelled deletion')
     }
-  }, [isEditable, data])
+    
+    console.log('=== DELETE WAYPOINT DEBUG END ===')
+  }, [isEditable, data, waypoints])
   
   // Handle group hover (desktop only)
   const handleGroupEnter = useCallback((index: number) => {
@@ -349,8 +397,12 @@ export default function ConnectionEdge({
                       right: '-8px',
                       zIndex: 10000,
                     }}
-                    onClick={(e) => handleDeleteClick(e, index)}
+                    onClick={(e) => {
+                      console.log('Delete button onClick triggered for index:', index)
+                      handleDeleteClick(e, index)
+                    }}
                     onMouseDown={(e) => {
+                      console.log('Delete button onMouseDown triggered for index:', index)
                       e.stopPropagation()
                       e.preventDefault()
                     }}
