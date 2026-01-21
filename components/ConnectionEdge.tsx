@@ -4,14 +4,12 @@ import React, { useState, useCallback } from 'react'
 import { 
   EdgeProps, 
   EdgeLabelRenderer,
-  getSmoothStepPath,
 } from 'reactflow'
 import { X } from 'lucide-react'
 
 interface Waypoint {
   x: number
   y: number
-  label?: string
 }
 
 interface ConnectionEdgeData {
@@ -22,7 +20,6 @@ interface ConnectionEdgeData {
   targetStatus?: string
   waypoints?: Waypoint[]
   onWaypointDrag?: (index: number, x: number, y: number, isDragEnd: boolean) => void
-  onWaypointLabelChange?: (index: number, label: string) => void
   onRemoveWaypoint?: (index: number) => void
   onAddWaypoint?: (x: number, y: number) => void
   isEditable?: boolean
@@ -39,18 +36,18 @@ export default function ConnectionEdge({
 }: EdgeProps<ConnectionEdgeData>) {
   const [hoveredWaypoint, setHoveredWaypoint] = useState<number | null>(null)
   const [draggingWaypoint, setDraggingWaypoint] = useState<number | null>(null)
-  const [editingLabel, setEditingLabel] = useState<number | null>(null)
-  const [labelInput, setLabelInput] = useState('')
   
   const waypoints = data?.waypoints || []
   const isEditable = data?.isEditable || false
   
-  // Build path through waypoints
+  // Build straight line path through waypoints
   const buildPath = useCallback(() => {
     if (waypoints.length === 0) {
+      // No waypoints - straight line from source to target
       return `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`
     }
     
+    // Build path through all waypoints
     let path = `M ${sourceX} ${sourceY}`
     waypoints.forEach((point) => {
       path += ` L ${point.x} ${point.y}`
@@ -76,7 +73,7 @@ export default function ConnectionEdge({
                           data?.type === 'FIBER_OPTIC' ? '2 2' : 
                           undefined
 
-  // Handle click on path to add waypoint - BEST PRACTICE: Click exact position
+  // Handle click on path to add waypoint
   const handlePathClick = useCallback((e: React.MouseEvent<SVGPathElement>) => {
     if (!isEditable || !data?.onAddWaypoint) return
     
@@ -97,13 +94,12 @@ export default function ConnectionEdge({
     data.onAddWaypoint(svgPoint.x, svgPoint.y)
   }, [isEditable, data])
 
-  // Handle waypoint drag start
+  // Handle waypoint drag
   const handleWaypointDragStart = useCallback((e: React.MouseEvent | React.TouchEvent, index: number) => {
     if (!isEditable) return
     
     e.stopPropagation()
     setDraggingWaypoint(index)
-    setHoveredWaypoint(index)
     
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
       if (!data?.onWaypointDrag) return
@@ -111,7 +107,7 @@ export default function ConnectionEdge({
       const clientX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX
       const clientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
       
-      // Update position in real-time (optimistic update)
+      // Update position in real-time
       data.onWaypointDrag(index, clientX, clientY, false)
     }
     
@@ -139,37 +135,17 @@ export default function ConnectionEdge({
     document.addEventListener('touchend', handleEnd as any)
   }, [isEditable, data])
 
-  // Handle waypoint label click
-  const handleLabelClick = useCallback((index: number, currentLabel?: string) => {
-    if (!isEditable || draggingWaypoint !== null) return
-    setEditingLabel(index)
-    setLabelInput(currentLabel || '')
-  }, [isEditable, draggingWaypoint])
-
-  // Save waypoint label
-  const saveLabel = useCallback((index: number) => {
-    if (data?.onWaypointLabelChange) {
-      data.onWaypointLabelChange(index, labelInput.trim())
-    }
-    setEditingLabel(null)
-    setLabelInput('')
-  }, [data, labelInput])
-
-  // Handle waypoint right-click to remove
-  const handleWaypointContextMenu = useCallback((e: React.MouseEvent, index: number) => {
+  // Handle waypoint removal
+  const handleRemoveWaypoint = useCallback((e: React.MouseEvent, index: number) => {
     if (!isEditable || !data?.onRemoveWaypoint) return
     
-    e.preventDefault()
     e.stopPropagation()
-    
-    if (confirm(`Hapus waypoint #${index + 1}?`)) {
-      data.onRemoveWaypoint(index)
-    }
+    data.onRemoveWaypoint(index)
   }, [isEditable, data])
 
   return (
     <>
-      {/* Main path - visible line */}
+      {/* Main connection line */}
       <path
         id={id}
         className="react-flow__edge-path"
@@ -184,7 +160,7 @@ export default function ConnectionEdge({
         }}
       />
       
-      {/* Wide invisible path for easier clicking - BEST PRACTICE */}
+      {/* Wide invisible path for easier clicking */}
       {isEditable && (
         <path
           d={edgePath}
@@ -197,7 +173,7 @@ export default function ConnectionEdge({
         />
       )}
       
-      {/* Animated flow - only when UP */}
+      {/* Animated flow effect when connection is UP */}
       {animated && isUp && (
         <path
           d={edgePath}
@@ -211,13 +187,11 @@ export default function ConnectionEdge({
         />
       )}
       
-      {/* Waypoint markers and labels - using EdgeLabelRenderer for proper positioning */}
+      {/* Waypoint markers - clean visual only, no labels */}
       <EdgeLabelRenderer>
         {waypoints.map((waypoint, index) => {
-          const isEditing = editingLabel === index
           const isDragging = draggingWaypoint === index
           const isHovered = hoveredWaypoint === index
-          const hasLabel = waypoint.label && waypoint.label.trim() !== ''
           
           return (
             <div
@@ -230,25 +204,23 @@ export default function ConnectionEdge({
                 zIndex: isDragging ? 1000 : 10,
               }}
             >
-              {/* Waypoint marker circle */}
+              {/* Waypoint marker - simple draggable circle */}
               <div
                 className={`
                   relative
                   ${isEditable ? 'cursor-move' : 'cursor-default'}
-                  ${isDragging ? 'scale-110' : ''}
+                  ${isDragging ? 'scale-125' : isHovered ? 'scale-110' : 'scale-100'}
                   transition-transform duration-150
                 `}
                 onMouseDown={(e) => handleWaypointDragStart(e, index)}
                 onTouchStart={(e) => handleWaypointDragStart(e, index)}
                 onMouseEnter={() => !isDragging && setHoveredWaypoint(index)}
                 onMouseLeave={() => !isDragging && setHoveredWaypoint(null)}
-                onContextMenu={(e) => handleWaypointContextMenu(e, index)}
               >
-                {/* Circle with number */}
+                {/* Simple circle marker */}
                 <div
                   className={`
-                    w-11 h-11 rounded-full border-2 bg-white
-                    flex items-center justify-center
+                    w-3 h-3 rounded-full border-2 bg-white
                     transition-all duration-200
                     shadow-md
                     ${isHovered || isDragging ? 'border-blue-500 shadow-lg' : 'border-gray-400'}
@@ -256,74 +228,20 @@ export default function ConnectionEdge({
                   style={{
                     borderColor: isHovered || isDragging ? '#3b82f6' : strokeColor,
                   }}
-                >
-                  <span className="text-xs font-semibold text-gray-700">
-                    #{index + 1}
-                  </span>
-                </div>
+                />
                 
-                {/* Remove button (X) - only show on hover in edit mode */}
+                {/* Remove button - only show on hover in edit mode */}
                 {isEditable && isHovered && !isDragging && (
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (confirm(`Hapus waypoint #${index + 1}?`)) {
-                        data?.onRemoveWaypoint?.(index)
-                      }
-                    }}
-                    className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-md"
-                    title="Hapus waypoint (atau klik kanan)"
-                    aria-label="Hapus waypoint"
+                    onClick={(e) => handleRemoveWaypoint(e, index)}
+                    className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-md"
+                    title="Remove waypoint"
+                    aria-label="Remove waypoint"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-2.5 h-2.5" />
                   </button>
                 )}
               </div>
-              
-              {/* Label display/edit - below waypoint */}
-              <div className="mt-1 min-w-[140px]">
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={labelInput}
-                    onChange={(e) => setLabelInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        saveLabel(index)
-                      } else if (e.key === 'Escape') {
-                        setEditingLabel(null)
-                        setLabelInput('')
-                      }
-                    }}
-                    onBlur={() => saveLabel(index)}
-                    autoFocus
-                    placeholder="Nama lokasi/ruangan..."
-                    className="w-full px-2 py-1 text-xs border border-blue-500 rounded bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <div
-                    onClick={() => handleLabelClick(index, waypoint.label)}
-                    className={`
-                      px-2 py-1 text-xs rounded text-center cursor-pointer transition-all
-                      ${hasLabel 
-                        ? 'bg-blue-100 text-blue-900 border border-blue-300 hover:bg-blue-200 font-medium' 
-                        : 'bg-gray-50 text-gray-500 border border-gray-300 hover:bg-gray-100'
-                      }
-                    `}
-                    title={hasLabel ? 'Klik untuk edit label' : 'Klik untuk tambah label'}
-                  >
-                    {hasLabel ? waypoint.label : 'Klik untuk label'}
-                  </div>
-                )}
-              </div>
-              
-              {/* Helper text - only show on hover for empty labels */}
-              {isEditable && isHovered && !hasLabel && !isEditing && (
-                <div className="mt-0.5 text-[9px] text-gray-400 text-center">
-                  Klik kanan untuk hapus
-                </div>
-              )}
             </div>
           )
         })}

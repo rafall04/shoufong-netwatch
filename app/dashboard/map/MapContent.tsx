@@ -400,35 +400,6 @@ function MapContentInner() {
     mutateConnections()
   }, [connectionsData, handleUpdateConnection, mutateConnections])
   
-  // Handle waypoint label change
-  const handleWaypointLabelChange = useCallback(async (
-    connectionId: string,
-    waypointIndex: number,
-    label: string
-  ) => {
-    if (!connectionsData?.connections) return
-    
-    const connection = connectionsData.connections.find(c => c.id === connectionId)
-    if (!connection) return
-    
-    const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
-    
-    if (waypoints[waypointIndex]) {
-      // Add or update label
-      waypoints[waypointIndex].label = label || undefined
-      
-      await handleUpdateConnection({
-        id: connectionId,
-        label: connection.label || undefined,
-        type: connection.type,
-        animated: connection.animated,
-        waypoints
-      })
-      
-      mutateConnections()
-    }
-  }, [connectionsData, handleUpdateConnection, mutateConnections])
-  
   // Remove waypoint from connection
   const handleRemoveWaypoint = useCallback(async (
     connectionId: string,
@@ -684,9 +655,6 @@ function MapContentInner() {
             onWaypointDrag: (index: number, x: number, y: number, isDragEnd: boolean) => {
               handleWaypointDrag(connection.id, index, x, y, isDragEnd)
             },
-            onWaypointLabelChange: (index: number, label: string) => {
-              handleWaypointLabelChange(connection.id, index, label)
-            },
             onAddWaypoint: (flowX: number, flowY: number) => {
               handleAddWaypoint(connection.id, flowX, flowY)
             },
@@ -701,7 +669,7 @@ function MapContentInner() {
     
     setNodes(flowNodes)
     setEdges(flowEdges)
-  }, [data, layoutData, connectionsData, setNodes, setEdges, session, editMode, handleLabelChange, deleteSelectedNode, handleWaypointDrag, handleWaypointLabelChange, handleAddWaypoint, handleRemoveWaypoint])
+  }, [data, layoutData, connectionsData, setNodes, setEdges, session, editMode, handleLabelChange, deleteSelectedNode, handleWaypointDrag, handleAddWaypoint, handleRemoveWaypoint])
   
   if (error) {
     return (
@@ -818,8 +786,7 @@ function MapContentInner() {
                   <div className="text-[10px] text-blue-700 mt-1 space-y-0.5">
                     <p>✓ Klik kabel untuk tambah waypoint</p>
                     <p>✓ Drag waypoint untuk adjust jalur</p>
-                    <p>✓ Klik label untuk edit nama lokasi</p>
-                    <p>✓ Klik kanan waypoint untuk hapus</p>
+                    <p>✓ Hover waypoint untuk hapus</p>
                   </div>
                 ) : (
                   <p className="text-[10px] text-gray-600 mt-1">
