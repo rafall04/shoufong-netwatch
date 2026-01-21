@@ -15,6 +15,7 @@ interface ConnectionEdgeData {
   waypoints?: Array<{ x: number; y: number }>
   onWaypointDrag?: (index: number, x: number, y: number) => void
   onRemoveWaypoint?: (index: number) => void
+  onAddWaypoint?: (x: number, y: number) => void
   isEditable?: boolean
 }
 
@@ -28,6 +29,7 @@ export default function ConnectionEdge({
   markerEnd,
 }: EdgeProps<ConnectionEdgeData>) {
   const [hoveredWaypoint, setHoveredWaypoint] = useState<number | null>(null)
+  const [hoveredPath, setHoveredPath] = useState(false)
   
   const waypoints = data?.waypoints || []
   const isEditable = data?.isEditable || false
@@ -67,7 +69,28 @@ export default function ConnectionEdge({
                           data?.type === 'FIBER_OPTIC' ? '2 2' : 
                           undefined
 
-  // Simplified waypoint drag - more efficient
+  // Handle double-click on path to add waypoint
+  const handlePathDoubleClick = (e: React.MouseEvent<SVGPathElement>) => {
+    if (!isEditable || !data?.onAddWaypoint) return
+    
+    e.stopPropagation()
+    
+    // Get click position relative to the SVG
+    const svg = (e.target as SVGElement).ownerSVGElement
+    if (!svg) return
+    
+    const point = svg.createSVGPoint()
+    point.x = e.clientX
+    point.y = e.clientY
+    
+    // Transform to SVG coordinates
+    const svgPoint = point.matrixTransform(svg.getScreenCTM()?.inverse())
+    
+    // Add waypoint at double-click position
+    data.onAddWaypoint(svgPoint.x, svgPoint.y)
+  }
+
+  // Waypoint drag - optimized for all devices
   const handleWaypointMouseDown = (index: number, e: React.MouseEvent) => {
     if (!isEditable || !data?.onWaypointDrag) return
     
@@ -86,10 +109,33 @@ export default function ConnectionEdge({
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
   }
+  
+  // Touch support for mobile
+  const handleWaypointTouchStart = (index: number, e: React.TouchEvent) => {
+    if (!isEditable || !data?.onWaypointDrag) return
+    
+    e.stopPropagation()
+    e.preventDefault()
+    
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      const touch = moveEvent.touches[0]
+      if (touch) {
+        data?.onWaypointDrag?.(index, touch.clientX, touch.clientY)
+      }
+    }
+    
+    const handleTouchEnd = () => {
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
+    }
+    
+    document.addEventListener('touchmove', handleTouchMove)
+    document.addEventListener('touchend', handleTouchEnd)
+  }
 
   return (
     <>
-      {/* Main path - single layer, no gradients */}
+      {/* Main path */}
       <path
         id={id}
         className="react-flow__edge-path"
@@ -100,6 +146,36 @@ export default function ConnectionEdge({
         markerEnd={markerEnd}
         strokeDasharray={strokeDasharray}
       />
+      
+      {/* Wide invisible path for easier double-click (desktop only) */}
+      {isEditable && (
+        <path
+          d={edgePath}
+          strokeWidth={16}
+          stroke="transparent"
+          fill="none"
+          className="cursor-crosshair"
+          onDoubleClick={handlePathDoubleClick}
+          onMouseEnter={() => setHoveredPath(true)}
+          onMouseLeave={() => setHoveredPath(false)}
+          style={{
+            pointerEvents: 'stroke'
+          }}
+        />
+      )}
+      
+      {/* Hover indicator on path */}
+      {isEditable && hoveredPath && (
+        <path
+          d={edgePath}
+          strokeWidth={5}
+          stroke={strokeColor}
+          fill="none"
+          strokeDasharray="4 4"
+          opacity={0.3}
+          className="pointer-events-none"
+        />
+      )}
       
       {/* Animated flow - only when UP */}
       {animated && isUp && (
@@ -117,63 +193,118 @@ export default function ConnectionEdge({
         />
       )}
       
-      {/* Waypoint markers - larger and easier to grab */}
+      {/* Waypoint markers - LARGE touch targets */}
       {isEditable && waypoints.map((point, index) => (
         <g key={`waypoint-${index}`}>
-          {/* Larger hit area for easier dragging */}
+          {/* Extra large invisible hit area for easier interaction */}
           <circle
             cx={point.x}
             cy={point.y}
-            r={12}
+            r={22}
             fill="transparent"
             className="cursor-move"
             onMouseDown={(e) => handleWaypointMouseDown(index, e)}
+            onTouchStart={(e) => handleWaypointTouchStart(index, e)}
             onMouseEnter={() => setHoveredWaypoint(index)}
             onMouseLeave={() => setHoveredWaypoint(null)}
           />
           
-          {/* Visual waypoint */}
+          {/* Outer ring when hovered - visual feedback */}
+          {hoveredWaypoint === index && (
+            <circle
+              cx={point.x}
+              cy={point.y}
+              r={14}
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth={2}
+              opacity={0.3}
+              className="pointer-events-none"
+            />
+          )}
+          
+          {/* Visual waypoint - larger for easier grabbing */}
           <circle
             cx={point.x}
             cy={point.y}
-            r={hoveredWaypoint === index ? 8 : 6}
-            fill={strokeColor}
-            stroke="white"
-            strokeWidth={2}
+            r={hoveredWaypoint === index ? 10 : 8}
+            fill="white"
+            stroke={strokeColor}
+            strokeWidth={3}
             className="pointer-events-none"
             style={{
-              transition: 'r 0.15s ease'
+              transition: 'r 0.15s ease',
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
             }}
           />
           
-          {/* Delete button - always visible when hovered */}
+          {/* Inner dot for better visibility */}
+          <circle
+            cx={point.x}
+            cy={point.y}
+            r={4}
+            fill={strokeColor}
+            className="pointer-events-none"
+          />
+          
+          {/* Delete button - larger touch target */}
           {hoveredWaypoint === index && data?.onRemoveWaypoint && (
             <g>
+              {/* Larger invisible hit area */}
               <circle
-                cx={point.x + 14}
-                cy={point.y - 14}
-                r={10}
-                fill="#ef4444"
-                stroke="white"
-                strokeWidth={2}
+                cx={point.x + 18}
+                cy={point.y - 18}
+                r={16}
+                fill="transparent"
                 className="cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation()
                   data.onRemoveWaypoint?.(index)
                 }}
               />
+              {/* Visual delete button */}
+              <circle
+                cx={point.x + 18}
+                cy={point.y - 18}
+                r={12}
+                fill="#ef4444"
+                stroke="white"
+                strokeWidth={2}
+                className="pointer-events-none"
+                style={{
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                }}
+              />
               <text
-                x={point.x + 14}
-                y={point.y - 9}
+                x={point.x + 18}
+                y={point.y - 12}
                 textAnchor="middle"
                 fill="white"
-                fontSize="12"
+                fontSize="14"
                 fontWeight="bold"
                 className="pointer-events-none select-none"
               >
                 ×
               </text>
             </g>
+          )}
+          
+          {/* Waypoint number label */}
+          {hoveredWaypoint === index && (
+            <text
+              x={point.x}
+              y={point.y - 20}
+              textAnchor="middle"
+              fill={strokeColor}
+              fontSize="11"
+              fontWeight="bold"
+              className="pointer-events-none select-none"
+              style={{
+                filter: 'drop-shadow(0 1px 2px rgba(255,255,255,0.8))'
+              }}
+            >
+              #{index + 1}
+            </text>
           )}
         </g>
       ))}
@@ -194,6 +325,23 @@ export default function ConnectionEdge({
               style={{ borderColor: strokeColor }}
             >
               {data.label}
+            </div>
+          </div>
+        </EdgeLabelRenderer>
+      )}
+      
+      {/* Helper text when hovering path in edit mode */}
+      {isEditable && hoveredPath && !waypoints.length && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY - 30}px)`,
+              pointerEvents: 'none',
+            }}
+          >
+            <div className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium shadow-lg animate-pulse">
+              Double-click untuk tambah waypoint
             </div>
           </div>
         </EdgeLabelRenderer>
