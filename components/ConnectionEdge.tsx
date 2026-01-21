@@ -128,7 +128,7 @@ export default function ConnectionEdge({
   const isUp = sourceStatus === 'up' && targetStatus === 'up'
   const isDown = sourceStatus === 'down' || targetStatus === 'down'
   
-  // Get gradient colors - Bold status colors
+  // Get gradient colors - Bold status colors for high visibility
   const { sourceColor, targetColor } = useMemo(() => {
     if (isDown) {
       return { sourceColor: '#f43f5e', targetColor: '#f43f5e' } // Rose-500
@@ -136,16 +136,11 @@ export default function ConnectionEdge({
     if (isUp) {
       return { sourceColor: '#10b981', targetColor: '#10b981' } // Emerald-500
     }
-    return { sourceColor: '#94a3b8', targetColor: '#94a3b8' } // Slate-400
+    return { sourceColor: '#64748b', targetColor: '#64748b' } // Slate-500 (darker for visibility)
   }, [isUp, isDown])
   
   const gradientId = `gradient-${id}`
   const animated = data?.animated !== false
-  
-  // Stroke style based on type
-  const strokeDasharray = data?.type === 'WIRELESS' ? '8 4' : 
-                          data?.type === 'FIBER_OPTIC' ? '2 2' : 
-                          undefined
 
   return (
     <>
@@ -157,18 +152,19 @@ export default function ConnectionEdge({
         </linearGradient>
       </defs>
       
-      {/* Main connection line - Bold and visible */}
+      {/* Main connection line - SOLID and BOLD for visibility at zoom out */}
       <path
         id={id}
         className="react-flow__edge-path"
         d={edgePath}
-        strokeWidth={2.5} // Increased from 1.5 to 2.5 for better visibility
+        strokeWidth={3} // Increased to 3px for maximum visibility
         stroke={`url(#${gradientId})`}
         fill="none"
         markerEnd={markerEnd}
-        strokeDasharray={strokeDasharray}
         style={{
           transition: draggingWaypoint !== null ? 'none' : 'stroke 0.3s ease',
+          filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.1))', // Subtle shadow for contrast
+          zIndex: -1, // Behind nodes
         }}
       />
       
@@ -185,20 +181,19 @@ export default function ConnectionEdge({
         />
       )}
       
-      {/* Animated flow effect - Only for UP status (dash animation) */}
+      {/* Animated flow effect - Only for UP status (subtle pulse) */}
       {animated && isUp && (
         <>
-          {/* Marching ants animation for active connections */}
+          {/* Subtle pulse animation for active connections */}
           <path
             d={edgePath}
-            strokeWidth={2.5}
+            strokeWidth={3}
             stroke="#10b981" // Emerald for active flow
             fill="none"
-            strokeDasharray="8 4"
             className="pointer-events-none"
             style={{
-              animation: 'dash 1s linear infinite',
-              opacity: 0.6,
+              animation: 'dash 2s ease-in-out infinite',
+              opacity: 0.3,
             }}
           />
         </>

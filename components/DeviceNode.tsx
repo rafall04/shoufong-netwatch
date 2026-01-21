@@ -59,37 +59,37 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
     setIsMounted(true)
   }, [])
 
-  // Icon mapping - comprehensive device types
+  // Icon mapping - comprehensive device types (compact size)
   const getIcon = () => {
     switch (type) {
       case 'ROUTER':
-        return <Router className="w-7 h-7" strokeWidth={1.5} />
+        return <Router className="w-5 h-5" strokeWidth={1.5} />
       case 'SWITCH':
-        return <Network className="w-7 h-7" strokeWidth={1.5} />
+        return <Network className="w-5 h-5" strokeWidth={1.5} />
       case 'ACCESS_POINT':
-        return <Wifi className="w-7 h-7" strokeWidth={1.5} />
+        return <Wifi className="w-5 h-5" strokeWidth={1.5} />
       case 'PC':
-        return <Monitor className="w-7 h-7" strokeWidth={1.5} />
+        return <Monitor className="w-5 h-5" strokeWidth={1.5} />
       case 'LAPTOP':
-        return <Laptop className="w-7 h-7" strokeWidth={1.5} />
+        return <Laptop className="w-5 h-5" strokeWidth={1.5} />
       case 'TABLET':
-        return <Tablet className="w-7 h-7" strokeWidth={1.5} />
+        return <Tablet className="w-5 h-5" strokeWidth={1.5} />
       case 'PRINTER':
-        return <Printer className="w-7 h-7" strokeWidth={1.5} />
+        return <Printer className="w-5 h-5" strokeWidth={1.5} />
       case 'SCANNER_GTEX':
-        return <ScanBarcode className="w-7 h-7" strokeWidth={1.5} />
+        return <ScanBarcode className="w-5 h-5" strokeWidth={1.5} />
       case 'SMART_TV':
-        return <Tv className="w-7 h-7" strokeWidth={1.5} />
+        return <Tv className="w-5 h-5" strokeWidth={1.5} />
       case 'CCTV':
-        return <Video className="w-7 h-7" strokeWidth={1.5} />
+        return <Video className="w-5 h-5" strokeWidth={1.5} />
       case 'SERVER':
-        return <Server className="w-7 h-7" strokeWidth={1.5} />
+        return <Server className="w-5 h-5" strokeWidth={1.5} />
       case 'PHONE':
-        return <Smartphone className="w-7 h-7" strokeWidth={1.5} />
+        return <Smartphone className="w-5 h-5" strokeWidth={1.5} />
       case 'OTHER':
-        return <HelpCircle className="w-7 h-7" strokeWidth={1.5} />
+        return <HelpCircle className="w-5 h-5" strokeWidth={1.5} />
       default:
-        return <Router className="w-7 h-7" strokeWidth={1.5} />
+        return <Router className="w-5 h-5" strokeWidth={1.5} />
     }
   }
 
@@ -151,12 +151,12 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
 
   return (
     <div 
-      className={`cursor-pointer relative ${
+      className={`cursor-pointer relative flex flex-col items-center justify-center gap-0 ${
         isDrawingMode ? (isDrawingSource ? 'ring-2 ring-indigo-500 rounded-full' : '') : ''
       }`}
       style={{
-        width: '48px', // Compact circular node
-        height: '72px', // Height includes label space
+        width: '40px', // Ultra compact for high density
+        height: '48px', // Tight vertical space
       }}
       onClick={(e) => {
         e.stopPropagation()
@@ -183,39 +183,43 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
       onMouseLeave={() => setShowTooltip(false)}
       suppressHydrationWarning
     >
-      {/* Handles positioned at center of circle */}
+      {/* Handles positioned at center of icon */}
       <Handle 
         type="target" 
         position={Position.Top} 
         className="opacity-0"
-        style={{ top: '24px', left: '24px' }}
+        style={{ top: '20px', left: '20px' }}
       />
       
-      {/* Circular Icon Container - Minimalist */}
+      {/* Circular Icon Container - Ultra Compact */}
       <div className={`
         bg-white rounded-full 
-        w-12 h-12 
+        w-10 h-10 
         flex items-center justify-center 
-        shadow-md 
-        transition-transform duration-200
+        shadow-sm 
+        transition-all duration-200
         hover:scale-110
         border-2
         ${statusStyles.borderColor}
+        z-20 relative
       `}>
         <div className={statusStyles.iconColor}>
           {getIcon()}
         </div>
       </div>
       
-      {/* Device Name Label - Floating Below */}
+      {/* Device Name Label - Overlapping for Space Efficiency */}
       <div className="
-        absolute -bottom-6 left-1/2 -translate-x-1/2
-        w-32 text-center 
-        text-xs font-semibold text-slate-700 
-        bg-white/80 backdrop-blur-sm 
-        rounded px-1 py-0.5 
-        truncate
+        bg-white/90 backdrop-blur-sm 
+        px-2 py-0.5 
+        rounded-md 
+        -mt-1.5
+        z-30
+        border border-slate-200
         shadow-sm
+        text-[10px] font-bold text-slate-700 
+        leading-tight tracking-wide uppercase
+        max-w-[80px] truncate text-center
       ">
         {name}
       </div>
@@ -260,7 +264,7 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
         type="source" 
         position={Position.Bottom} 
         className="opacity-0"
-        style={{ top: '24px', left: '24px' }}
+        style={{ top: '20px', left: '20px' }}
       />
     </div>
   )

@@ -849,8 +849,8 @@ function MapContentInner() {
             },
           },
           style: {
-            width: 48, // Compact circular node
-            height: 72, // Height includes label space
+            width: 40, // Ultra compact for high density
+            height: 48, // Tight vertical space
           },
           draggable: session?.user?.role !== 'VIEWER' && !isDrawingMode,
           selectable: session?.user?.role !== 'VIEWER' && !isDrawingMode,
