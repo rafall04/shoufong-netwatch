@@ -112,3 +112,22 @@
     }
   }
 }
+
+/* CRITICAL: Electric Flow Animation - High Performance */
+@keyframes electricFlow {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-electric {
+  animation: electricFlow 0.5s linear infinite;
+}
+
+.stroke-dasharray-\[12\,4\] {
+  stroke-dasharray: 12, 4;
+}
+

@@ -849,7 +849,7 @@ function MapContentInner() {
             },
           },
           style: {
-            width: 40, // Ultra compact for high density
+            width: 48, // Compact with forced overlap
             height: 48, // Tight vertical space
           },
           draggable: session?.user?.role !== 'VIEWER' && !isDrawingMode,

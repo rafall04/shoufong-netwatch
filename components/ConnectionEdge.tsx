@@ -122,52 +122,42 @@ export default function ConnectionEdge({
     return calculateMultiPointBezierPath(start, waypoints, end, 0.25)
   }, [sourceX, sourceY, targetX, targetY, waypoints])
 
-  // Status colors - ELECTRIC vibrant palette for maximum visibility
+  // CRITICAL: Force electric colors with direct logic
   const sourceStatus = data?.sourceStatus || 'unknown'
   const targetStatus = data?.targetStatus || 'unknown'
   const isUp = sourceStatus === 'up' && targetStatus === 'up'
   const isDown = sourceStatus === 'down' || targetStatus === 'down'
   
-  // Get gradient colors - BRIGHT electric colors that pop
-  const { sourceColor, targetColor } = useMemo(() => {
-    if (isDown) {
-      return { sourceColor: '#ff2222', targetColor: '#ff2222' } // Bright Alert Red
-    }
-    if (isUp) {
-      return { sourceColor: '#00e055', targetColor: '#00e055' } // Bright Electric Green
-    }
-    return { sourceColor: '#cbd5e1', targetColor: '#cbd5e1' } // Bright Silver
-  }, [isUp, isDown])
+  // Direct color assignment - NO gradients, pure electric colors
+  const edgeColor = isUp ? '#00E055' : isDown ? '#FF2222' : '#94a3b8'
   
   const gradientId = `gradient-${id}`
   const animated = data?.animated !== false
 
   return (
     <>
-      {/* Define gradient for connection */}
+      {/* Define gradient (kept for compatibility but using solid color) */}
       <defs>
         <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor={sourceColor} />
-          <stop offset="100%" stopColor={targetColor} />
+          <stop offset="0%" stopColor={edgeColor} />
+          <stop offset="100%" stopColor={edgeColor} />
         </linearGradient>
       </defs>
       
-      {/* Main connection line - ELECTRIC colors with flow animation */}
+      {/* CRITICAL: Main connection line - FORCED electric colors with direct style */}
       <path
         id={id}
-        className={`react-flow__edge-path ${animated && isUp ? 'animate-flow' : ''}`}
         d={edgePath}
-        strokeWidth={3}
-        stroke={`url(#${gradientId})`}
-        strokeLinecap="round" // Smooth liquid ends
-        fill="none"
-        markerEnd={markerEnd}
-        strokeDasharray={animated && isUp ? '10 10' : undefined} // Packet look for UP, solid for DOWN
+        className={isUp && animated ? 'animate-electric stroke-dasharray-[12,4]' : ''}
         style={{
+          stroke: edgeColor,
+          strokeWidth: '3px',
+          strokeLinecap: 'round',
+          fill: 'none',
+          filter: 'drop-shadow(0 1px 2px rgb(0 0 0 / 0.1))',
           transition: draggingWaypoint !== null ? 'none' : 'stroke 0.3s ease',
-          filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.15))', // Subtle lift
-          zIndex: -1,
         }}
+        markerEnd={markerEnd}
       />
       
       {/* Wide invisible path for easier clicking */}
@@ -183,7 +173,7 @@ export default function ConnectionEdge({
         />
       )}
       
-      {/* Remove old animation - now using CSS animate-flow class */}
+      {/* Remove old animation comment */}
       
       {/* Waypoint markers - SIMPLE drag with GLOBAL listeners */}
       {isEditable && (
@@ -212,7 +202,7 @@ export default function ConnectionEdge({
                     margin: '-12px',
                   }}
                 >
-                  {/* Waypoint dot - Electric colored border */}
+                  {/* Waypoint dot - FORCED electric colored border */}
                   <div
                     className={`
                       relative rounded-full
@@ -226,7 +216,7 @@ export default function ConnectionEdge({
                         'w-3 h-3'}
                     `}
                     style={{
-                      borderColor: isUp ? '#00e055' : isDown ? '#ff2222' : '#cbd5e1'
+                      borderColor: edgeColor
                     }}
                     onPointerDown={(e) => handleWaypointPointerDown(e, index)}
                     title="Drag untuk geser waypoint (unlimited range)"

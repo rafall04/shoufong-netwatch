@@ -93,22 +93,19 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
     }
   }
 
-  // Status-based styling - Electric vibrant colors
+  // Status-based styling - Keep icon colors only (border now forced in JSX)
   const getStatusStyles = () => {
     if (status === 'up') {
       return {
-        borderColor: 'border-[#00e055]', // Bright Electric Green
         iconColor: 'text-emerald-600',
       }
     }
     if (status === 'down') {
       return {
-        borderColor: 'border-[#ff2222]', // Bright Alert Red
         iconColor: 'text-rose-600',
       }
     }
     return {
-      borderColor: 'border-slate-300',
       iconColor: 'text-slate-500',
     }
   }
@@ -151,12 +148,12 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
 
   return (
     <div 
-      className={`cursor-pointer relative flex flex-col items-center justify-center gap-0 ${
+      className={`cursor-pointer relative flex flex-col items-center justify-center ${
         isDrawingMode ? (isDrawingSource ? 'ring-2 ring-indigo-500 rounded-full' : '') : ''
       }`}
       style={{
-        width: '40px', // Ultra compact for high density
-        height: '48px', // Tight vertical space
+        width: '48px', // Compact for high density
+        height: '48px', // Tight with overlap
       }}
       onClick={(e) => {
         e.stopPropagation()
@@ -188,39 +185,45 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
         type="target" 
         position={Position.Top} 
         className="opacity-0"
-        style={{ top: '20px', left: '20px' }}
+        style={{ top: '24px', left: '24px' }}
       />
       
-      {/* Circular Icon Container - Ultra Compact */}
-      <div className={`
-        bg-white rounded-full 
-        w-10 h-10 
-        flex items-center justify-center 
-        shadow-sm 
-        transition-all duration-200
-        hover:scale-110
-        border-2
-        ${statusStyles.borderColor}
-        z-20 relative
-      `}>
+      {/* CRITICAL: Circular Icon Container - FORCED electric border colors */}
+      <div 
+        className="
+          w-12 h-12 
+          rounded-full 
+          bg-white 
+          border-[3px]
+          z-20 
+          flex items-center justify-center 
+          shadow-md 
+          transition-all duration-200
+          hover:scale-110
+        "
+        style={{
+          borderColor: status === 'up' ? '#00E055' : status === 'down' ? '#FF2222' : '#cbd5e1'
+        }}
+      >
         <div className={statusStyles.iconColor}>
           {getIcon()}
         </div>
       </div>
       
-      {/* Device Name Label - Overlapping for Space Efficiency */}
-      <div className="
-        bg-white/90 backdrop-blur-sm 
-        px-2 py-0.5 
-        rounded-md 
-        -mt-1.5
-        z-30
-        border border-slate-200
-        shadow-sm
-        text-[10px] font-bold text-slate-700 
-        leading-tight tracking-wide uppercase
-        max-w-[80px] truncate text-center
-      ">
+      {/* CRITICAL: Device Name Label - FORCED negative margin for overlap */}
+      <div 
+        className="
+          -mt-3
+          px-3 py-0.5 
+          bg-white/95 
+          border border-slate-200 
+          rounded-md 
+          shadow-sm
+          z-30
+          text-[10px] font-bold uppercase tracking-wider text-slate-700
+          max-w-[80px] truncate text-center
+        "
+      >
         {name}
       </div>
 
@@ -264,7 +267,7 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
         type="source" 
         position={Position.Bottom} 
         className="opacity-0"
-        style={{ top: '20px', left: '20px' }}
+        style={{ top: '24px', left: '24px' }}
       />
     </div>
   )
