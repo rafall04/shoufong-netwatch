@@ -43,14 +43,13 @@ interface DeviceNodeData {
   statusSince?: string
   onClick?: (e?: React.MouseEvent) => void
   onContextMenu?: (e: React.MouseEvent) => void
-  onStartDrawing?: () => void
   onFinalizeDrawing?: () => void
   isDrawingMode?: boolean
   isDrawingSource?: boolean
 }
 
 const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
-  const { name, status, type, ip, statusSince, onClick, onContextMenu, onStartDrawing, onFinalizeDrawing, isDrawingMode, isDrawingSource } = data
+  const { name, status, type, ip, statusSince, onClick, onContextMenu, onFinalizeDrawing, isDrawingMode, isDrawingSource } = data
   const [showTooltip, setShowTooltip] = useState(false)
   const [timeSince, setTimeSince] = useState<string | null>(null)
   const [isMounted, setIsMounted] = useState(false)
@@ -162,16 +161,15 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
       onClick={(e) => {
         e.stopPropagation()
         if (isDrawingMode) {
+          // If in drawing mode and this is NOT the source, finalize connection
           if (isDrawingSource) {
-            return
+            return // Can't connect to self
           }
           if (onFinalizeDrawing) {
             onFinalizeDrawing()
           }
         } else {
-          if (onStartDrawing) {
-            onStartDrawing()
-          }
+          // Normal mode: just show device details popup
           if (onClick) {
             onClick(e)
           }

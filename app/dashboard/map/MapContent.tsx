@@ -829,7 +829,6 @@ function MapContentInner() {
             statusSince: device.statusSince,
             isDrawingMode: isDrawingMode,
             isDrawingSource: isDrawingMode && drawingSourceId === device.id,
-            onStartDrawing: () => startDrawingConnection(device.id),
             onFinalizeDrawing: () => finalizeConnection(device.id),
             onClick: (e?: React.MouseEvent) => {
               if (!isDrawingMode) {
