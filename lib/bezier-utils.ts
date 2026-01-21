@@ -136,7 +136,7 @@ export function findOptimalWaypointIndex(
 
 /**
  * Calculate gradient color based on two status colors
- * Returns CSS gradient string
+ * Returns CSS gradient string with HIGH CONTRAST neon colors
  */
 export function calculateStatusGradient(
   sourceStatus: string,
@@ -145,9 +145,9 @@ export function calculateStatusGradient(
   const getColor = (status: string) => {
     switch (status) {
       case 'up':
-        return '#10b981' // green-500
+        return '#39FF14' // Neon Green - High contrast for visibility
       case 'down':
-        return '#ef4444' // red-500
+        return '#FF073A' // Neon Red - High contrast
       default:
         return '#9ca3af' // gray-400
     }

@@ -90,22 +90,22 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
     }
   }
 
-  // Status-based styling with glassmorphism
+  // Status-based styling with glassmorphism and NEON colors
   const getStatusStyles = () => {
     if (status === 'up') {
       return {
-        borderColor: '#10b981',
+        borderColor: '#39FF14', // Neon Green
         iconColor: 'text-green-600',
-        glowColor: 'rgba(16, 185, 129, 0.3)',
+        glowColor: 'rgba(57, 255, 20, 0.4)', // Neon green glow
         ringColor: 'ring-green-500/30',
         bgGradient: 'from-green-50/80 to-emerald-50/80',
       }
     }
     if (status === 'down') {
       return {
-        borderColor: '#ef4444',
+        borderColor: '#FF073A', // Neon Red
         iconColor: 'text-red-600',
-        glowColor: 'rgba(239, 68, 68, 0.3)',
+        glowColor: 'rgba(255, 7, 58, 0.4)', // Neon red glow
         ringColor: 'ring-red-500/30',
         bgGradient: 'from-red-50/80 to-rose-50/80',
       }
@@ -158,6 +158,10 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
   return (
     <div 
       className="flex flex-col items-center gap-1 cursor-pointer relative group"
+      style={{
+        width: '96px', // Fixed width for ReactFlow calculations (80px + padding)
+        height: '96px', // Fixed height for ReactFlow calculations
+      }}
       onClick={(e) => {
         if (onClick) onClick(e)
       }}
@@ -169,7 +173,13 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
       onMouseLeave={() => setShowTooltip(false)}
       suppressHydrationWarning
     >
-      <Handle type="target" position={Position.Top} className="opacity-0" />
+      {/* Handles positioned at center for proper edge connection */}
+      <Handle 
+        type="target" 
+        position={Position.Top} 
+        className="opacity-0"
+        style={{ top: '48px', left: '48px' }} // Center of 96x96 container
+      />
       
       {/* Glassmorphism card with breathing animation */}
       <div className="relative">
@@ -209,18 +219,19 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
             {getIcon()}
           </div>
           
-          {/* Status indicator dot */}
+          {/* Status indicator dot with NEON colors */}
           <div 
             className={`
               absolute -top-1 -right-1
               w-4 h-4 rounded-full
               border-2 border-white
-              ${status === 'up' ? 'bg-green-500 animate-pulse-slow' : 
-                status === 'down' ? 'bg-red-500' : 
-                'bg-gray-400'}
+              ${status === 'up' ? 'animate-pulse-slow' : ''}
             `}
             style={{
-              boxShadow: `0 0 8px ${statusStyles.glowColor}`,
+              backgroundColor: status === 'up' ? '#39FF14' : 
+                              status === 'down' ? '#FF073A' : 
+                              '#9ca3af',
+              boxShadow: `0 0 12px ${statusStyles.glowColor}`, // Stronger glow
             }}
           />
         </div>
@@ -259,9 +270,16 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
               <div 
                 className={`
                   w-2 h-2 rounded-full
-                  ${status === 'up' ? 'bg-green-400 animate-pulse-slow' : 
-                    status === 'down' ? 'bg-red-400' : 'bg-gray-400'}
+                  ${status === 'up' ? 'animate-pulse-slow' : ''}
                 `}
+                style={{
+                  backgroundColor: status === 'up' ? '#39FF14' : 
+                                  status === 'down' ? '#FF073A' : 
+                                  '#9ca3af',
+                  boxShadow: status === 'up' ? '0 0 8px rgba(57, 255, 20, 0.6)' :
+                            status === 'down' ? '0 0 8px rgba(255, 7, 58, 0.6)' :
+                            'none',
+                }}
               />
               <span className={`font-medium ${
                 status === 'up' ? 'text-green-400' : 
@@ -285,7 +303,12 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
         </div>
       )}
       
-      <Handle type="source" position={Position.Bottom} className="opacity-0" />
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
+        className="opacity-0"
+        style={{ top: '48px', left: '48px' }} // Center of 96x96 container
+      />
     </div>
   )
 }

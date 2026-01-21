@@ -704,6 +704,10 @@ function MapContentInner() {
               })
             },
           },
+          style: {
+            width: 96, // Fixed width for proper edge connection
+            height: 96, // Fixed height for proper edge connection
+          },
           draggable: session?.user?.role !== 'VIEWER',
           selectable: session?.user?.role !== 'VIEWER',
         })

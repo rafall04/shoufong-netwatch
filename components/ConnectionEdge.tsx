@@ -230,20 +230,20 @@ export default function ConnectionEdge({
         </linearGradient>
       </defs>
       
-      {/* Main connection line with gradient */}
+      {/* Main connection line with gradient - HIGH CONTRAST */}
       <path
         id={id}
         className="react-flow__edge-path"
         d={edgePath}
-        strokeWidth={3}
+        strokeWidth={4} // Increased from 3 to 4 for better visibility
         stroke={`url(#${gradientId})`}
         fill="none"
         markerEnd={markerEnd}
         strokeDasharray={strokeDasharray}
         style={{
           transition: draggingWaypoint !== null ? 'none' : 'stroke 0.3s ease',
-          filter: isUp ? 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.4))' : 
-                  isDown ? 'drop-shadow(0 0 4px rgba(239, 68, 68, 0.4))' : 
+          filter: isUp ? 'drop-shadow(0 0 8px rgba(57, 255, 20, 0.6))' : // Neon green glow
+                  isDown ? 'drop-shadow(0 0 8px rgba(255, 7, 58, 0.6))' : // Neon red glow
                   'none',
         }}
       />
@@ -296,16 +296,16 @@ export default function ConnectionEdge({
             />
           </circle>
           
-          {/* Glow effect on active connection */}
+          {/* Glow effect on active connection - ENHANCED */}
           <path
             d={edgePath}
-            strokeWidth={5}
+            strokeWidth={8} // Increased from 5 to 8 for stronger glow
             stroke={`url(#${gradientId})`}
             fill="none"
-            opacity={0.2}
+            opacity={0.3} // Increased from 0.2 to 0.3
             className="pointer-events-none"
             style={{
-              filter: 'blur(4px)',
+              filter: 'blur(6px)', // Increased from 4px to 6px
             }}
           />
         </>
