@@ -129,46 +129,53 @@ export default function ConnectionEdge({
   const handleWaypointDragStart = useCallback((e: React.PointerEvent, index: number) => {
     if (!isEditable) return
     
-    // CRITICAL: Stop propagation to prevent triggering path click
     e.stopPropagation()
     e.preventDefault()
     
+    console.log('=== DRAG START DEBUG ===')
+    console.log('1. Pointer type:', e.pointerType)
+    console.log('2. Start clientX:', e.clientX, 'clientY:', e.clientY)
+    console.log('3. Is touch device:', isTouchDevice)
+    
     setDraggingWaypoint(index)
     
-    // On touch devices, also set as selected
     if (isTouchDevice) {
       setSelectedWaypoint(index)
     }
     
-    // Capture pointer for smooth dragging
     const target = e.currentTarget as HTMLElement
     target.setPointerCapture(e.pointerId)
+    
+    let moveCount = 0
     
     const handleMove = (moveEvent: PointerEvent) => {
       if (!data?.onWaypointDrag) return
       
-      // Update position in real-time using pointer coordinates
+      moveCount++
+      if (moveCount === 1 || moveCount % 10 === 0) {
+        console.log(`Move ${moveCount}: clientX=${moveEvent.clientX}, clientY=${moveEvent.clientY}`)
+      }
+      
       data.onWaypointDrag(index, moveEvent.clientX, moveEvent.clientY, false)
     }
     
     const handleEnd = (endEvent: PointerEvent) => {
       if (!data?.onWaypointDrag) return
       
-      // Save to database on drag end
+      console.log('=== DRAG END DEBUG ===')
+      console.log('End clientX:', endEvent.clientX, 'clientY:', endEvent.clientY)
+      console.log('Total moves:', moveCount)
+      
       data.onWaypointDrag(index, endEvent.clientX, endEvent.clientY, true)
       
       setDraggingWaypoint(null)
-      
-      // Release pointer capture
       target.releasePointerCapture(endEvent.pointerId)
       
-      // Clean up listeners
       document.removeEventListener('pointermove', handleMove)
       document.removeEventListener('pointerup', handleEnd)
       document.removeEventListener('pointercancel', handleEnd)
     }
     
-    // Use Pointer Events for unified mouse/touch handling
     document.addEventListener('pointermove', handleMove)
     document.addEventListener('pointerup', handleEnd)
     document.addEventListener('pointercancel', handleEnd)
