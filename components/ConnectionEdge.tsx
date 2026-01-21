@@ -281,9 +281,9 @@ export default function ConnectionEdge({
               style={{
                 position: 'absolute',
                 transform: `translate(-50%, -50%) translate(${waypoint.x}px, ${waypoint.y}px)`,
-                pointerEvents: 'all',
-                // CRITICAL: High z-index to ensure delete button is above line
-                zIndex: isDragging ? 1000 : (isHovered || isSelected) ? 100 : 50,
+                pointerEvents: 'none', // CRITICAL: Container is non-interactive
+                // CRITICAL: Very high z-index to ensure above all lines
+                zIndex: isDragging ? 9999 : (isHovered || isSelected) ? 9998 : 9997,
               }}
             >
               {/* GROUP HOVER CONTAINER - Wraps dot AND button with invisible padding */}
@@ -292,9 +292,10 @@ export default function ConnectionEdge({
                 onPointerEnter={() => handleGroupEnter(index)}
                 onPointerLeave={handleGroupLeave}
                 style={{
-                  // Invisible padding area (30px) to prevent flickering
-                  padding: '30px',
-                  margin: '-30px',
+                  // Invisible padding area (40px) to prevent flickering
+                  padding: '40px',
+                  margin: '-40px',
+                  pointerEvents: 'all', // CRITICAL: Enable interaction on group
                 }}
               >
                 {/* Draggable waypoint circle */}
@@ -313,6 +314,9 @@ export default function ConnectionEdge({
                     }
                   }}
                   title={isEditable ? "Drag to move, click X to delete" : "Waypoint"}
+                  style={{
+                    pointerEvents: 'all', // CRITICAL: Enable interaction
+                  }}
                 >
                   {/* Circle marker */}
                   <div
@@ -328,66 +332,87 @@ export default function ConnectionEdge({
                   />
                 </div>
                 
-                {/* Delete button - smooth fade in/out with opacity */}
-                <div
-                  className="absolute -top-5 -right-5 transition-opacity duration-200"
-                  style={{
-                    // CRITICAL: Use opacity instead of display:none for smooth transition
-                    opacity: showDeleteButton ? 1 : 0,
-                    pointerEvents: showDeleteButton ? 'all' : 'none',
-                    // CRITICAL: Highest z-index to be above everything
-                    zIndex: 1001,
-                  }}
-                >
-                  {/* Touch-friendly button with large hit area */}
-                  <button
-                    className="
-                      relative
-                      w-11 h-11 md:w-8 md:h-8
-                      flex items-center justify-center
-                      cursor-pointer
-                      group
-                    "
-                    onPointerDown={(e) => {
-                      // CRITICAL: Stop ALL propagation to prevent Ghost Click Bug
-                      e.stopPropagation()
-                      e.preventDefault()
-                      
-                      // Call delete handler
-                      handleRemoveWaypoint(e, index)
+                {/* Delete button - CLOSER positioning (12px offset) */}
+                {showDeleteButton && (
+                  <div
+                    className="absolute"
+                    style={{
+                      // CRITICAL: Closer positioning - 12px offset from center
+                      top: '-12px',
+                      right: '-12px',
+                      pointerEvents: 'all', // CRITICAL: Enable interaction
+                      // CRITICAL: Highest z-index to be above everything
+                      zIndex: 10000,
                     }}
-                    onClick={(e) => {
-                      // CRITICAL: Additional safety - stop propagation on click too
-                      e.stopPropagation()
-                      e.preventDefault()
-                    }}
-                    aria-label="Delete waypoint"
-                    title="Delete waypoint"
-                    type="button"
                   >
-                    {/* Visible X button (centered in hit area) */}
-                    <div
+                    {/* Touch-friendly button with large hit area */}
+                    <button
                       className="
-                        absolute inset-0
+                        relative
+                        w-10 h-10 md:w-7 md:h-7
                         flex items-center justify-center
+                        cursor-pointer
+                        group
                       "
+                      onPointerDown={(e) => {
+                        // CRITICAL: Stop ALL propagation FIRST
+                        e.stopPropagation()
+                        e.preventDefault()
+                        
+                        // CRITICAL: Immediate removal to prevent ghost clicks
+                        handleRemoveWaypoint(e, index)
+                      }}
+                      onPointerUp={(e) => {
+                        // CRITICAL: Stop propagation on pointer up too
+                        e.stopPropagation()
+                        e.preventDefault()
+                      }}
+                      onClick={(e) => {
+                        // CRITICAL: Stop propagation on click
+                        e.stopPropagation()
+                        e.preventDefault()
+                      }}
+                      onMouseDown={(e) => {
+                        // CRITICAL: Stop propagation on mouse down
+                        e.stopPropagation()
+                        e.preventDefault()
+                      }}
+                      onTouchStart={(e) => {
+                        // CRITICAL: Stop propagation on touch start
+                        e.stopPropagation()
+                        e.preventDefault()
+                      }}
+                      aria-label="Delete waypoint"
+                      title="Delete waypoint"
+                      type="button"
+                      style={{
+                        // CRITICAL: Ensure button is above everything
+                        position: 'relative',
+                        zIndex: 10001,
+                      }}
                     >
+                      {/* Visible X button (centered in hit area) */}
                       <div
                         className="
-                          w-5 h-5
+                          w-5 h-5 md:w-4 md:h-4
                           flex items-center justify-center
-                          bg-red-500 hover:bg-red-600
+                          bg-red-500 hover:bg-red-600 active:bg-red-700
                           rounded-full
                           shadow-lg
-                          transition-all duration-200
+                          transition-all duration-150
                           group-hover:scale-110
+                          group-active:scale-95
                         "
+                        style={{
+                          // CRITICAL: Prevent any pointer events on child
+                          pointerEvents: 'none',
+                        }}
                       >
-                        <X className="w-3 h-3 text-white" strokeWidth={3} />
+                        <X className="w-3 h-3 md:w-2.5 md:h-2.5 text-white" strokeWidth={3} />
                       </div>
-                    </div>
-                  </button>
-                </div>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )
