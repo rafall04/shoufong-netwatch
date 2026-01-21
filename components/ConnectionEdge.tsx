@@ -122,17 +122,22 @@ export default function ConnectionEdge({
     return calculateMultiPointBezierPath(start, waypoints, end, 0.25)
   }, [sourceX, sourceY, targetX, targetY, waypoints])
 
-  // Status colors with gradient support using utility
+  // Status colors - Refined engineering palette
   const sourceStatus = data?.sourceStatus || 'unknown'
   const targetStatus = data?.targetStatus || 'unknown'
   const isUp = sourceStatus === 'up' && targetStatus === 'up'
   const isDown = sourceStatus === 'down' || targetStatus === 'down'
   
-  // Get gradient colors from utility
-  const { sourceColor, targetColor } = useMemo(
-    () => calculateStatusGradient(sourceStatus, targetStatus),
-    [sourceStatus, targetStatus]
-  )
+  // Get gradient colors - Subtle slate for normal, colored for status
+  const { sourceColor, targetColor } = useMemo(() => {
+    if (isDown) {
+      return { sourceColor: '#f43f5e', targetColor: '#f43f5e' } // Rose
+    }
+    if (isUp) {
+      return { sourceColor: '#10b981', targetColor: '#10b981' } // Emerald
+    }
+    return { sourceColor: '#cbd5e1', targetColor: '#cbd5e1' } // Slate-300
+  }, [isUp, isDown])
   
   const gradientId = `gradient-${id}`
   const animated = data?.animated !== false
@@ -152,21 +157,18 @@ export default function ConnectionEdge({
         </linearGradient>
       </defs>
       
-      {/* Main connection line with gradient - HIGH CONTRAST */}
+      {/* Main connection line - Refined and subtle */}
       <path
         id={id}
         className="react-flow__edge-path"
         d={edgePath}
-        strokeWidth={4} // Increased from 3 to 4 for better visibility
+        strokeWidth={1.5} // Reduced from 4 to 1.5 for refined look
         stroke={`url(#${gradientId})`}
         fill="none"
         markerEnd={markerEnd}
         strokeDasharray={strokeDasharray}
         style={{
           transition: draggingWaypoint !== null ? 'none' : 'stroke 0.3s ease',
-          filter: isUp ? 'drop-shadow(0 0 8px rgba(57, 255, 20, 0.6))' : // Neon green glow
-                  isDown ? 'drop-shadow(0 0 8px rgba(255, 7, 58, 0.6))' : // Neon red glow
-                  'none',
         }}
       />
       
@@ -183,51 +185,19 @@ export default function ConnectionEdge({
         />
       )}
       
-      {/* Animated flow effect - moving particles along path */}
+      {/* Animated flow effect - Subtle marching ants for active connections */}
       {animated && isUp && (
         <>
-          {/* Particle 1 */}
-          <circle r="3" fill={sourceColor} className="pointer-events-none">
-            <animateMotion
-              dur="2s"
-              repeatCount="indefinite"
-              path={edgePath}
-            />
-            <animate
-              attributeName="opacity"
-              values="0;1;1;0"
-              dur="2s"
-              repeatCount="indefinite"
-            />
-          </circle>
-          
-          {/* Particle 2 (delayed) */}
-          <circle r="3" fill={targetColor} className="pointer-events-none">
-            <animateMotion
-              dur="2s"
-              repeatCount="indefinite"
-              path={edgePath}
-              begin="1s"
-            />
-            <animate
-              attributeName="opacity"
-              values="0;1;1;0"
-              dur="2s"
-              repeatCount="indefinite"
-              begin="1s"
-            />
-          </circle>
-          
-          {/* Glow effect on active connection - ENHANCED */}
+          {/* Marching ants animation */}
           <path
             d={edgePath}
-            strokeWidth={8} // Increased from 5 to 8 for stronger glow
-            stroke={`url(#${gradientId})`}
+            strokeWidth={1.5}
+            stroke="#6366f1" // Indigo for active flow
             fill="none"
-            opacity={0.3} // Increased from 0.2 to 0.3
+            strokeDasharray="4 4"
             className="pointer-events-none"
             style={{
-              filter: 'blur(6px)', // Increased from 4px to 6px
+              animation: 'dash 1s linear infinite',
             }}
           />
         </>
@@ -260,30 +230,22 @@ export default function ConnectionEdge({
                     margin: '-12px',
                   }}
                 >
-                  {/* Waypoint dot - DRAGGABLE with UNLIMITED range */}
+                  {/* Waypoint dot - Clean and minimal */}
                   <div
                     className={`
                       relative rounded-full
-                      bg-blue-500/70 backdrop-blur-sm
-                      border-2 border-blue-600
-                      shadow-md
+                      bg-indigo-500/80 backdrop-blur-sm
+                      border-2 border-white
+                      shadow-sm
                       transition-all duration-150
                       cursor-move
-                      ${isDragging ? 'w-4 h-4 scale-125 shadow-xl' : 
-                        isHovered ? 'w-3 h-3 scale-110 shadow-lg' : 
+                      ${isDragging ? 'w-4 h-4 scale-125 shadow-md' : 
+                        isHovered ? 'w-3 h-3 scale-110 shadow-sm' : 
                         'w-2.5 h-2.5'}
                     `}
                     onPointerDown={(e) => handleWaypointPointerDown(e, index)}
                     title="Drag untuk geser waypoint (unlimited range)"
-                  >
-                    {/* Inner glow */}
-                    <div 
-                      className="absolute inset-0 rounded-full"
-                      style={{
-                        background: `radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, transparent 70%)`,
-                      }}
-                    />
-                  </div>
+                  />
                   
                   {/* Delete button - show on hover */}
                   {isHovered && !isDragging && (

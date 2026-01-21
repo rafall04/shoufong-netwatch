@@ -94,32 +94,23 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
     }
   }
 
-  // Status-based styling with glassmorphism and NEON colors
+  // Status-based styling - Clean engineering aesthetic
   const getStatusStyles = () => {
     if (status === 'up') {
       return {
-        borderColor: '#39FF14', // Neon Green
-        iconColor: 'text-green-600',
-        glowColor: 'rgba(57, 255, 20, 0.4)', // Neon green glow
-        ringColor: 'ring-green-500/30',
-        bgGradient: 'from-green-50/80 to-emerald-50/80',
+        pulseColor: 'bg-emerald-500',
+        iconColor: 'text-slate-600',
       }
     }
     if (status === 'down') {
       return {
-        borderColor: '#FF073A', // Neon Red
-        iconColor: 'text-red-600',
-        glowColor: 'rgba(255, 7, 58, 0.4)', // Neon red glow
-        ringColor: 'ring-red-500/30',
-        bgGradient: 'from-red-50/80 to-rose-50/80',
+        pulseColor: 'bg-rose-500',
+        iconColor: 'text-slate-600',
       }
     }
     return {
-      borderColor: '#9ca3af',
-      iconColor: 'text-gray-500',
-      glowColor: 'rgba(156, 163, 175, 0.2)',
-      ringColor: 'ring-gray-400/20',
-      bgGradient: 'from-gray-50/80 to-slate-50/80',
+      pulseColor: 'bg-slate-400',
+      iconColor: 'text-slate-500',
     }
   }
 
@@ -161,18 +152,17 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
 
   return (
     <div 
-      className={`flex flex-col items-center gap-1 cursor-pointer relative group ${
-        isDrawingMode ? (isDrawingSource ? 'ring-4 ring-lime-500 rounded-2xl' : 'ring-2 ring-blue-400 rounded-2xl') : ''
+      className={`cursor-pointer relative group ${
+        isDrawingMode ? (isDrawingSource ? 'ring-2 ring-indigo-500/50 rounded-xl' : 'ring-1 ring-slate-300 rounded-xl') : ''
       }`}
       style={{
-        width: '96px', // Fixed width for ReactFlow calculations (80px + padding)
-        height: '96px', // Fixed height for ReactFlow calculations
+        width: '180px', // Card token width
+        height: '96px', // Fixed height for ReactFlow
       }}
       onClick={(e) => {
         e.stopPropagation()
         if (isDrawingMode) {
           if (isDrawingSource) {
-            // Can't connect to self
             return
           }
           if (onFinalizeDrawing) {
@@ -195,133 +185,88 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
       onMouseLeave={() => setShowTooltip(false)}
       suppressHydrationWarning
     >
-      {/* Handles positioned at center for proper edge connection */}
+      {/* Handles positioned at center */}
       <Handle 
         type="target" 
         position={Position.Top} 
         className="opacity-0"
-        style={{ top: '48px', left: '48px' }} // Center of 96x96 container
+        style={{ top: '48px', left: '90px' }}
       />
       
-      {/* Glassmorphism card with breathing animation */}
-      <div className="relative">
-        {/* Breathing ring animation for UP status */}
-        {status === 'up' && (
-          <div 
-            className="absolute inset-0 rounded-2xl animate-breathing"
-            style={{
-              boxShadow: `0 0 20px ${statusStyles.glowColor}`,
-            }}
-          />
-        )}
-        
-        {/* Main card */}
-        <div 
-          className={`
-            relative
-            w-16 h-16
-            rounded-2xl
-            bg-gradient-to-br ${statusStyles.bgGradient}
-            backdrop-blur-md
-            border-2
-            shadow-lg
-            transition-all duration-300
-            group-hover:scale-110
-            group-hover:shadow-2xl
-            flex items-center justify-center
-            ${status === 'down' ? 'animate-shake' : ''}
-          `}
-          style={{
-            borderColor: statusStyles.borderColor,
-            boxShadow: `0 4px 12px ${statusStyles.glowColor}, 0 0 0 1px ${statusStyles.borderColor}20`,
-          }}
-        >
-          {/* Icon */}
-          <div className={`${statusStyles.iconColor} transition-transform duration-300 group-hover:scale-110`}>
+      {/* Card Token Design */}
+      <div className="
+        w-full h-full
+        bg-white rounded-xl 
+        border border-slate-200 
+        shadow-sm 
+        transition-all duration-200 
+        hover:shadow-md
+        hover:ring-2 hover:ring-indigo-500/20
+        flex items-center gap-3 px-3
+      ">
+        {/* Icon Area - Left Side */}
+        <div className="flex-shrink-0 w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center">
+          <div className={statusStyles.iconColor}>
             {getIcon()}
           </div>
-          
-          {/* Status indicator dot with NEON colors */}
-          <div 
-            className={`
-              absolute -top-1 -right-1
-              w-4 h-4 rounded-full
-              border-2 border-white
-              ${status === 'up' ? 'animate-pulse-slow' : ''}
-            `}
-            style={{
-              backgroundColor: status === 'up' ? '#39FF14' : 
-                              status === 'down' ? '#FF073A' : 
-                              '#9ca3af',
-              boxShadow: `0 0 12px ${statusStyles.glowColor}`, // Stronger glow
-            }}
-          />
         </div>
-      </div>
-      
-      {/* Device name label with glassmorphism */}
-      <div className="
-        px-2 py-0.5
-        bg-white/80 backdrop-blur-sm
-        rounded-md
-        border border-gray-200/50
-        shadow-sm
-        text-[10px] text-gray-700 font-medium
-        max-w-[80px] truncate text-center
-        transition-all duration-200
-        group-hover:bg-white/90
-        group-hover:shadow-md
-      ">
-        {name}
+        
+        {/* Info Area - Right Side */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          {/* Device Name */}
+          <div className="font-semibold text-slate-800 text-sm truncate">
+            {name}
+          </div>
+          
+          {/* IP Address */}
+          <div className="font-mono text-xs text-slate-500 truncate">
+            {ip}
+          </div>
+        </div>
+        
+        {/* Status Pulse Dot - Top Right Corner */}
+        <div 
+          className={`
+            absolute top-2 right-2
+            w-2.5 h-2.5 rounded-full
+            ${statusStyles.pulseColor}
+            ${status === 'up' ? 'animate-pulse-slow' : ''}
+          `}
+        />
       </div>
 
-      {/* Enhanced tooltip with metrics */}
+      {/* Clean tooltip */}
       {showTooltip && isMounted && (
-        <div className="absolute bottom-full mb-3 z-50 pointer-events-none animate-fade-in" suppressHydrationWarning>
+        <div className="absolute bottom-full mb-2 z-50 pointer-events-none animate-fade-in" suppressHydrationWarning>
           <div className="
-            bg-gray-900/95 backdrop-blur-md
+            bg-slate-900/95 backdrop-blur-sm
             text-white text-xs rounded-lg
             px-3 py-2
             whitespace-nowrap
-            shadow-2xl
-            border border-gray-700/50
+            shadow-xl
+            border border-slate-700/50
           ">
-            <div className="font-semibold text-sm mb-1">{name}</div>
-            <div className="text-gray-300 font-mono text-[10px] mb-1">{ip}</div>
+            <div className="font-semibold mb-1">{name}</div>
+            <div className="text-slate-300 font-mono text-[10px] mb-1">{ip}</div>
             <div className="flex items-center gap-2">
               <div 
                 className={`
                   w-2 h-2 rounded-full
+                  ${statusStyles.pulseColor}
                   ${status === 'up' ? 'animate-pulse-slow' : ''}
                 `}
-                style={{
-                  backgroundColor: status === 'up' ? '#39FF14' : 
-                                  status === 'down' ? '#FF073A' : 
-                                  '#9ca3af',
-                  boxShadow: status === 'up' ? '0 0 8px rgba(57, 255, 20, 0.6)' :
-                            status === 'down' ? '0 0 8px rgba(255, 7, 58, 0.6)' :
-                            'none',
-                }}
               />
-              <span className={`font-medium ${
-                status === 'up' ? 'text-green-400' : 
-                status === 'down' ? 'text-red-400' : 'text-gray-400'
+              <span className={`font-medium text-[10px] ${
+                status === 'up' ? 'text-emerald-400' : 
+                status === 'down' ? 'text-rose-400' : 'text-slate-400'
               }`}>
                 {status.toUpperCase()}
               </span>
               {timeSince && (
-                <span className="text-gray-400 text-[10px]">• {timeSince}</span>
+                <span className="text-slate-400 text-[10px]">• {timeSince}</span>
               )}
             </div>
           </div>
-          {/* Tooltip arrow */}
-          <div className="
-            absolute top-full left-1/2 -translate-x-1/2 -mt-px
-            w-0 h-0
-            border-l-4 border-l-transparent
-            border-r-4 border-r-transparent
-            border-t-4 border-t-gray-900/95
-          " />
         </div>
       )}
       
@@ -329,7 +274,7 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
         type="source" 
         position={Position.Bottom} 
         className="opacity-0"
-        style={{ top: '48px', left: '48px' }} // Center of 96x96 container
+        style={{ top: '48px', left: '90px' }}
       />
     </div>
   )

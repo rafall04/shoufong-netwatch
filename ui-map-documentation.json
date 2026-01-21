@@ -1,0 +1,889 @@
+{
+  "project": {
+    "name": "MikroTik Netwatch Dashboard - Network Map UI",
+    "version": "1.0.0",
+    "description": "Real-time network monitoring dashboard dengan visual map untuk MikroTik devices",
+    "tech_stack": {
+      "framework": "Next.js 14 (App Router)",
+      "ui_library": "React 18",
+      "language": "TypeScript",
+      "styling": "Tailwind CSS",
+      "map_library": "ReactFlow",
+      "state_management": "SWR (for data fetching)",
+      "icons": "Lucide React"
+    }
+  },
+  "current_ui_structure": {
+    "main_components": {
+      "MapContent": {
+        "file": "app/dashboard/map/MapContent.tsx",
+        "description": "Main container untuk network map dengan ReactFlow",
+        "responsibilities": [
+          "Render ReactFlow canvas dengan devices dan connections",
+          "Handle device positioning dan drag-drop",
+          "Manage layout elements (lanes, rooms, dividers, labels)",
+          "Handle manual cable drawing dengan waypoints",
+          "Real-time data fetching dari API (20s interval)",
+          "Connection management (add, edit, delete, waypoint editing)"
+        ]
+      }
+    }
+  }
+}
+,
+  "ui_panels_and_controls": {
+    "top_left_stack": {
+      "description": "Panel stack di pojok kiri atas dengan spacing 8px antar panel",
+      "panels": [
+        {
+          "name": "ReactFlow Controls",
+          "position": "marginTop: 0px",
+          "height": "~112px",
+          "features": ["Zoom in", "Zoom out", "Fit view", "Lock/unlock"],
+          "component": "Built-in ReactFlow Controls"
+        },
+        {
+          "name": "Fullscreen Button",
+          "position": "marginTop: 128px",
+          "height": "40px",
+          "features": ["Toggle fullscreen mode", "ESC to exit"],
+          "icon": "Maximize2 / Minimize2"
+        },
+        {
+          "name": "Connections Button",
+          "position": "marginTop: 176px",
+          "height": "40px",
+          "features": ["Open connections management panel"],
+          "icon": "Link2",
+          "role_restriction": "Hidden for VIEWER role"
+        },
+        {
+          "name": "Connections Panel (expandable)",
+          "position": "marginTop: 224px",
+          "width": "256px (w-64)",
+          "features": [
+            "Edit Mode toggle untuk waypoint editing",
+            "Add Connection button",
+            "List semua connections dengan edit/delete",
+            "Show waypoint count per connection"
+          ],
+          "role_restriction": "Hidden for VIEWER role"
+        }
+      ]
+    }
+  }
+}
+,
+    "top_right_panel": {
+      "name": "Status Panel",
+      "position": "top-right",
+      "features": [
+        "Device status counters (UP count, DOWN count, Total)",
+        "Last update timestamp dengan countdown (Xs ago)",
+        "Manual refresh button (trigger MikroTik sync)",
+        "Refresh animation saat loading"
+      ],
+      "styling": "bg-white rounded shadow-sm p-2"
+    },
+    "top_center_panel": {
+      "name": "Layout Tools",
+      "position": "top-center",
+      "features": [
+        "Add Lane (IN, OUT, BOTH)",
+        "Add Room",
+        "Add Divider",
+        "Add Label"
+      ],
+      "role_restriction": "Hidden for VIEWER role",
+      "expandable": true
+    },
+    "bottom_left_panel": {
+      "name": "Legend",
+      "position": "bottom-left",
+      "features": [
+        "Device type icons legend (13 types)",
+        "Status color legend (UP, DOWN, Unknown)",
+        "Toggle button untuk show/hide"
+      ],
+      "expandable": true
+    },
+    "bottom_right_panel": {
+      "name": "MiniMap",
+      "position": "bottom-right",
+      "component": "Built-in ReactFlow MiniMap",
+      "features": ["Overview seluruh canvas", "Quick navigation"]
+    }
+  }
+,
+  "device_nodes": {
+    "component": "DeviceNode.tsx",
+    "size": "96x96px (fixed untuk proper edge connection)",
+    "visual_design": {
+      "card": {
+        "size": "64x64px (w-16 h-16)",
+        "shape": "rounded-2xl",
+        "background": "Gradient glassmorphism dengan backdrop-blur-md",
+        "border": "2px dengan warna status (Neon Green/Red/Gray)",
+        "shadow": "shadow-lg dengan glow effect",
+        "hover_effect": "scale-110, shadow-2xl"
+      },
+      "status_indicator": {
+        "position": "Top-right corner (-top-1 -right-1)",
+        "size": "16x16px (w-4 h-4)",
+        "shape": "rounded-full",
+        "colors": {
+          "up": "#39FF14 (Neon Green) dengan animate-pulse-slow",
+          "down": "#FF073A (Neon Red)",
+          "unknown": "#9ca3af (Gray)"
+        },
+        "glow": "boxShadow dengan rgba glow effect"
+      },
+      "icon": {
+        "size": "28x28px (w-7 h-7)",
+        "stroke_width": "1.5px",
+        "colors": "Status-based (green-600, red-600, gray-500)"
+      },
+      "label": {
+        "position": "Below card",
+        "styling": "bg-white/80 backdrop-blur-sm, rounded-md",
+        "text": "10px font-medium, max-width 80px truncate"
+      }
+    }
+  }
+}
+,
+    "device_types": [
+      {"type": "ROUTER", "icon": "Router"},
+      {"type": "SWITCH", "icon": "Network"},
+      {"type": "ACCESS_POINT", "icon": "Wifi"},
+      {"type": "PC", "icon": "Monitor"},
+      {"type": "LAPTOP", "icon": "Laptop"},
+      {"type": "TABLET", "icon": "Tablet"},
+      {"type": "PRINTER", "icon": "Printer"},
+      {"type": "SCANNER_GTEX", "icon": "ScanBarcode"},
+      {"type": "SMART_TV", "icon": "Tv"},
+      {"type": "CCTV", "icon": "Video"},
+      {"type": "SERVER", "icon": "Server"},
+      {"type": "PHONE", "icon": "Smartphone"},
+      {"type": "OTHER", "icon": "HelpCircle"}
+    ],
+    "tooltip": {
+      "trigger": "onMouseEnter",
+      "position": "Above device (bottom-full mb-3)",
+      "content": [
+        "Device name (font-semibold text-sm)",
+        "IP address (font-mono text-[10px])",
+        "Status dengan dot indicator dan time since"
+      ],
+      "styling": "bg-gray-900/95 backdrop-blur-md, rounded-lg, shadow-2xl"
+    },
+    "interactions": {
+      "click": "Open device detail popup",
+      "right_click": "Open context menu (Copy IP, Copy Name, Add Connection, View Details)",
+      "drag": "Move device position (disabled for VIEWER role)",
+      "drawing_mode": {
+        "source_click": "Start drawing connection",
+        "target_click": "Finalize connection"
+      }
+    }
+  }
+,
+  "connection_edges": {
+    "component": "ConnectionEdge.tsx",
+    "visual_design": {
+      "path": {
+        "type": "Polyline (straight lines through waypoints)",
+        "stroke_width": "4px (HIGH CONTRAST)",
+        "gradient": "Linear gradient dari source ke target status color",
+        "glow_effect": {
+          "up": "drop-shadow(0 0 8px rgba(57, 255, 20, 0.6))",
+          "down": "drop-shadow(0 0 8px rgba(255, 7, 58, 0.6))"
+        }
+      },
+      "animation": {
+        "condition": "animated && sourceStatus === 'up' && targetStatus === 'up'",
+        "particles": [
+          {"radius": "3px", "duration": "2s", "fill": "sourceColor"},
+          {"radius": "3px", "duration": "2s", "fill": "targetColor", "delay": "1s"}
+        ],
+        "glow_layer": {
+          "stroke_width": "8px",
+          "opacity": "0.3",
+          "blur": "6px"
+        }
+      },
+      "waypoints": {
+        "visible_when": "editMode === true && role !== VIEWER",
+        "dot": {
+          "size": "2.5px default, 3px hover, 4px dragging",
+          "color": "bg-blue-500/70 backdrop-blur-sm",
+          "border": "2px border-blue-600"
+        },
+        "delete_button": {
+          "visible": "On hover",
+          "position": "-top-1 -right-1",
+          "size": "16x16px (w-4 h-4)",
+          "icon": "X"
+        }
+      }
+    }
+  }
+}
+,
+    "connection_types": [
+      {"type": "LAN", "style": "Solid line"},
+      {"type": "WIRELESS", "style": "Dashed line (8 4)"},
+      {"type": "FIBER_OPTIC", "style": "Dotted line (2 2)"}
+    ],
+    "status_colors": {
+      "up": "#39FF14 (Neon Green)",
+      "down": "#FF073A (Neon Red)",
+      "unknown": "#9ca3af (Gray-400)"
+    },
+    "interactions": {
+      "click_path": "Add waypoint (when editMode active)",
+      "drag_waypoint": "Move waypoint position (unlimited range dengan global listeners)",
+      "hover_waypoint": "Show delete button",
+      "delete_waypoint": "Click X button dengan confirmation"
+    },
+    "waypoint_features": {
+      "add": "Click pada path untuk insert waypoint di segment terdekat",
+      "drag": "Unlimited range drag dengan document-level listeners",
+      "remove": "Hover waypoint → click X button",
+      "persistence": "Auto-save ke database saat drag end",
+      "optimistic_update": "Instant visual feedback dengan SWR cache mutation"
+    }
+  }
+,
+  "manual_cable_drawing": {
+    "description": "Feature untuk menggambar koneksi manual dengan waypoints",
+    "workflow": [
+      "1. Click source device → Start drawing mode",
+      "2. Click empty canvas → Add waypoint (unlimited)",
+      "3. Click target device → Finalize connection",
+      "4. ESC or Right-Click → Cancel drawing"
+    ],
+    "visual_feedback": {
+      "preview_line": {
+        "color": "#39FF14 (Neon Green)",
+        "style": "Dashed line (8 4) dengan animate-dash",
+        "stroke_width": "4px",
+        "glow": "drop-shadow(0 0 8px rgba(57, 255, 20, 0.6))"
+      },
+      "waypoint_markers": {
+        "shape": "Circle dengan number label",
+        "size": "16px radius (r=8)",
+        "fill": "#39FF14",
+        "stroke": "white 2px",
+        "label": "Sequential number (1, 2, 3...)"
+      },
+      "instructions_overlay": {
+        "position": "Top-center",
+        "content": [
+          "Click empty space to add waypoint",
+          "Click target device to finish",
+          "Press ESC or Right-Click to cancel",
+          "Waypoints: X"
+        ],
+        "styling": "bg-gray-900/95 backdrop-blur-md"
+      }
+    }
+  }
+}
+,
+    "state_management": {
+      "isDrawingMode": "Boolean - drawing mode active",
+      "drawingSourceId": "String - ID device source",
+      "drawingWaypoints": "Array<{x, y}> - waypoint coordinates",
+      "mousePosition": "{x, y} - current mouse position untuk preview"
+    },
+    "interactions": {
+      "source_node_click": "startDrawingConnection(deviceId)",
+      "canvas_click": "Add waypoint (DO NOT terminate)",
+      "target_node_click": "finalizeConnection(targetId)",
+      "esc_key": "cancelDrawing()",
+      "right_click": "cancelDrawing()"
+    }
+  },
+  "layout_elements": {
+    "component": "LayoutNode.tsx",
+    "types": [
+      {
+        "type": "LANE",
+        "subtypes": ["IN", "OUT", "BOTH"],
+        "default_size": "250x180px",
+        "color": "#3b82f6 (Blue)",
+        "features": ["Editable label", "Draggable", "Deletable"]
+      },
+      {
+        "type": "ROOM",
+        "default_size": "350x250px",
+        "color": "#f59e0b (Amber)",
+        "features": ["Editable label", "Draggable", "Deletable"]
+      },
+      {
+        "type": "DIVIDER",
+        "default_size": "400x4px",
+        "color": "#6b7280 (Gray)",
+        "features": ["Draggable", "Deletable"]
+      },
+      {
+        "type": "LABEL",
+        "default_size": "150x40px",
+        "color": "#1f2937 (Gray-800)",
+        "features": ["Editable text", "Draggable", "Deletable"]
+      }
+    ],
+    "z_index": "-1 (behind devices)",
+    "role_restriction": "Add/Edit/Delete disabled for VIEWER role"
+  }
+}
+,
+  "modals_and_popups": {
+    "device_detail_popup": {
+      "trigger": "Click device node",
+      "position": "Near click position (x+10, y+10)",
+      "size": "320px width (w-80)",
+      "content": [
+        "Device name (header)",
+        "IP Address",
+        "Type",
+        "Lane",
+        "Status",
+        "Status Since (Indonesian date format)",
+        "Last Seen (Indonesian date format)",
+        "Status History Timeline (24 hours)"
+      ],
+      "styling": "bg-white rounded-lg shadow-xl border-2"
+    },
+    "context_menu": {
+      "trigger": "Right-click device node",
+      "position": "At click position",
+      "options": [
+        "Copy IP",
+        "Copy Name",
+        "Add Connection (if not VIEWER)",
+        "View Details"
+      ],
+      "styling": "bg-white rounded shadow-lg border"
+    },
+    "connection_form_modal": {
+      "trigger": "Add Connection button atau context menu",
+      "features": [
+        "Source device selector (preselectable)",
+        "Target device selector",
+        "Connection type (LAN, WIRELESS, FIBER_OPTIC)",
+        "Label (optional)",
+        "Animated toggle"
+      ],
+      "component": "ConnectionFormModal.tsx"
+    },
+    "connection_edit_modal": {
+      "trigger": "Edit button di connections panel",
+      "features": [
+        "Show source & target (read-only)",
+        "Edit connection type",
+        "Edit label",
+        "Edit animated toggle",
+        "Waypoint count display"
+      ],
+      "component": "ConnectionEditModal.tsx"
+    }
+  }
+}
+,
+  "data_flow": {
+    "api_endpoints": {
+      "/api/devices": {
+        "method": "GET",
+        "refresh_interval": "20 seconds (SWR)",
+        "returns": "Array of Device objects"
+      },
+      "/api/layout": {
+        "method": "GET",
+        "returns": "Array of LayoutElement objects"
+      },
+      "/api/connections": {
+        "method": "GET",
+        "returns": "Array of DeviceConnection objects"
+      },
+      "/api/mikrotik/sync-devices": {
+        "method": "POST",
+        "body": "{mode: 'refresh'}",
+        "description": "Trigger manual sync dari MikroTik"
+      },
+      "/api/device/move": {
+        "method": "POST",
+        "body": "{deviceId, positionX, positionY}",
+        "description": "Update device position"
+      },
+      "/api/layout/update": {
+        "method": "POST",
+        "body": "{id, label?, positionX?, positionY?, width?, height?}",
+        "description": "Update layout element"
+      },
+      "/api/connections/update": {
+        "method": "POST",
+        "body": "{id, label?, type, animated, waypoints?}",
+        "description": "Update connection dengan waypoints"
+      }
+    }
+  }
+}
+,
+    "state_management": {
+      "library": "SWR (stale-while-revalidate)",
+      "features": [
+        "Auto-refresh every 20 seconds",
+        "Revalidate on focus",
+        "Optimistic updates untuk instant feedback",
+        "Manual refresh dengan mutate()"
+      ],
+      "caching": "SWR cache dengan optimistic mutations"
+    },
+    "real_time_updates": {
+      "device_status": "Auto-refresh 20s + manual refresh button",
+      "last_update_timer": "Update every 1 second (Xs ago)",
+      "connection_waypoints": "Optimistic update → save to DB → revalidate"
+    }
+  },
+  "styling_system": {
+    "framework": "Tailwind CSS",
+    "color_palette": {
+      "status_up": "#39FF14 (Neon Green)",
+      "status_down": "#FF073A (Neon Red)",
+      "status_unknown": "#9ca3af (Gray-400)",
+      "primary": "#3b82f6 (Blue-500)",
+      "secondary": "#6b7280 (Gray-500)",
+      "accent": "#f59e0b (Amber-500)"
+    },
+    "effects": {
+      "glassmorphism": "backdrop-blur-md dengan bg opacity",
+      "glow": "drop-shadow dengan rgba colors",
+      "animations": [
+        "animate-pulse-slow (status indicators)",
+        "animate-dash (drawing preview)",
+        "animate-spin (refresh button)",
+        "animate-breathing (UP status glow)"
+      ]
+    }
+  }
+}
+,
+    "responsive_design": {
+      "breakpoints": {
+        "mobile": "< 768px (md)",
+        "desktop": ">= 768px (md+)"
+      },
+      "mobile_adaptations": {
+        "sidebar": "Off-canvas dengan hamburger menu (top-4 right-4)",
+        "panels": "Adjusted positioning untuk avoid hamburger",
+        "touch_targets": "Minimum 40x40px (w-10 h-10)",
+        "status_panel": "Compact layout"
+      }
+    },
+    "accessibility": {
+      "aria_labels": "All buttons have aria-label",
+      "keyboard_navigation": [
+        "Tab untuk navigate",
+        "Delete key untuk delete selected nodes/edges",
+        "ESC untuk cancel drawing mode"
+      ],
+      "screen_reader": "Semantic HTML dengan proper labels"
+    }
+  },
+  "role_based_access": {
+    "ADMIN": {
+      "permissions": [
+        "View all",
+        "Add/Edit/Delete devices",
+        "Add/Edit/Delete connections",
+        "Add/Edit/Delete layout elements",
+        "Drag devices",
+        "Edit waypoints",
+        "Manual cable drawing"
+      ]
+    },
+    "OPERATOR": {
+      "permissions": [
+        "View all",
+        "Add/Edit/Delete devices",
+        "Add/Edit/Delete connections",
+        "Add/Edit/Delete layout elements",
+        "Drag devices",
+        "Edit waypoints",
+        "Manual cable drawing"
+      ]
+    },
+    "VIEWER": {
+      "permissions": [
+        "View only",
+        "Copy IP/Name",
+        "View device details"
+      ],
+      "restrictions": [
+        "Cannot drag devices",
+        "Cannot add/edit/delete anything",
+        "Layout tools hidden",
+        "Connections panel hidden",
+        "Edit mode disabled"
+      ]
+    }
+  }
+}
+,
+  "current_issues_and_pain_points": {
+    "visual_design": [
+      {
+        "issue": "Neon colors (#39FF14, #FF073A) terlalu terang dan melelahkan mata",
+        "impact": "User fatigue setelah monitoring lama",
+        "severity": "High"
+      },
+      {
+        "issue": "Glow effect terlalu kuat (opacity 0.4-0.6)",
+        "impact": "Visual clutter, sulit fokus",
+        "severity": "Medium"
+      },
+      {
+        "issue": "Device node dengan border tebal 2px dan shadow-lg terlihat berat",
+        "impact": "Tidak modern, terlihat kaku",
+        "severity": "Medium"
+      },
+      {
+        "issue": "Sidebar active state dengan gradient biru tebal",
+        "impact": "Terlalu dominan, tidak subtle",
+        "severity": "Low"
+      }
+    ],
+    "ux_issues": [
+      {
+        "issue": "Panel positioning manual dengan hardcoded marginTop",
+        "impact": "Sulit maintain, prone to overlapping",
+        "severity": "Medium"
+      },
+      {
+        "issue": "Drawing mode instructions overlay bisa menghalangi view",
+        "impact": "User harus move head untuk lihat canvas",
+        "severity": "Low"
+      },
+      {
+        "issue": "Context menu tidak auto-close saat scroll canvas",
+        "impact": "Menu bisa tertinggal di posisi lama",
+        "severity": "Low"
+      }
+    ]
+  }
+}
+,
+    "performance_issues": [
+      {
+        "issue": "Animasi partikel dengan 2s duration bisa terasa cepat",
+        "impact": "Kurang smooth, bisa distract",
+        "severity": "Low"
+      },
+      {
+        "issue": "Multiple glow layers (stroke-width 8px, opacity 0.3, blur 6px)",
+        "impact": "Bisa berat di low-end devices",
+        "severity": "Medium"
+      }
+    ]
+  },
+  "improvement_suggestions": {
+    "visual_redesign": [
+      {
+        "suggestion": "Ganti neon colors dengan modern minimalist palette",
+        "example": "Emerald-500 (#10b981) untuk UP, Rose-500 (#f43f5e) untuk DOWN",
+        "benefit": "Lebih nyaman di mata, profesional"
+      },
+      {
+        "suggestion": "Reduce glow opacity ke 0.15-0.2",
+        "benefit": "Subtle effect, tidak overwhelming"
+      },
+      {
+        "suggestion": "Device node dengan border 1px dan shadow-sm",
+        "benefit": "Lebih clean, modern, airy"
+      },
+      {
+        "suggestion": "Sidebar active indicator dengan vertical line tipis di kiri",
+        "benefit": "Subtle, elegant, tidak dominan"
+      },
+      {
+        "suggestion": "Stroke width connection dari 4px ke 3px",
+        "benefit": "Lebih refined, tidak terlalu tebal"
+      }
+    ]
+  }
+}
+,
+    "ux_improvements": [
+      {
+        "suggestion": "Floating Action Buttons (FAB) untuk controls",
+        "benefit": "Lebih modern, tidak kaku seperti kotak putih"
+      },
+      {
+        "suggestion": "Auto-calculate panel positions dengan constants",
+        "example": "PANEL_POSITIONS = { CONTROLS: 0, FULLSCREEN: 120, ... }",
+        "benefit": "Easier maintenance, no overlapping"
+      },
+      {
+        "suggestion": "Drawing instructions di bottom-center atau collapsible",
+        "benefit": "Tidak menghalangi view canvas"
+      },
+      {
+        "suggestion": "Context menu auto-close on canvas pan/zoom",
+        "benefit": "Better UX, menu tidak tertinggal"
+      }
+    ],
+    "performance_improvements": [
+      {
+        "suggestion": "Animasi partikel dengan 3s duration",
+        "benefit": "Lebih smooth, less distracting"
+      },
+      {
+        "suggestion": "Reduce glow layer stroke-width ke 6px, opacity 0.15",
+        "benefit": "Lighter rendering, better performance"
+      },
+      {
+        "suggestion": "Lazy load modals dengan dynamic import",
+        "benefit": "Faster initial load"
+      }
+    ]
+  }
+}
+,
+  "design_system_proposal": {
+    "theme": "Modern Minimalist Light",
+    "principles": [
+      "Airy - Banyak whitespace, tidak cramped",
+      "Professional - Warna subtle, tidak flashy",
+      "Tech-focused - Clean lines, geometric shapes",
+      "Accessible - High contrast, readable"
+    ],
+    "color_palette": {
+      "primary": {
+        "emerald_500": "#10b981",
+        "teal_500": "#14b8a6",
+        "usage": "Status UP, primary actions"
+      },
+      "danger": {
+        "rose_500": "#f43f5e",
+        "usage": "Status DOWN, destructive actions"
+      },
+      "neutral": {
+        "slate_50": "#f8fafc",
+        "slate_400": "#94a3b8",
+        "slate_600": "#475569",
+        "slate_900": "#0f172a",
+        "usage": "Backgrounds, text, borders"
+      },
+      "accent": {
+        "indigo_500": "#6366f1",
+        "usage": "Interactive elements, waypoints"
+      }
+    }
+  }
+}
+,
+    "typography": {
+      "font_family": "Inter atau Geist Sans (system default)",
+      "scale": {
+        "xs": "12px (0.75rem)",
+        "sm": "14px (0.875rem)",
+        "base": "16px (1rem)",
+        "lg": "18px (1.125rem)",
+        "xl": "20px (1.25rem)"
+      },
+      "improvements": [
+        "Increase line-height untuk better readability",
+        "Add letter-spacing untuk airy feel",
+        "Use font-medium instead of font-bold untuk subtle emphasis"
+      ]
+    },
+    "spacing": {
+      "base_unit": "4px",
+      "scale": [
+        "0.5 (2px)",
+        "1 (4px)",
+        "2 (8px) - Minimum gap",
+        "3 (12px)",
+        "4 (16px)",
+        "6 (24px)",
+        "8 (32px)"
+      ]
+    },
+    "shadows": {
+      "sm": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+      "md": "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+      "lg": "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+      "xl": "0 20px 25px -5px rgb(0 0 0 / 0.1)",
+      "usage": "Use sm/md untuk subtle depth, avoid heavy shadows"
+    }
+  }
+}
+,
+  "component_redesign_specs": {
+    "device_node": {
+      "card": {
+        "size": "80x80px (w-20 h-20)",
+        "shape": "rounded-2xl",
+        "background": "bg-gradient-to-br from-white to-{status}-50/30",
+        "border": "1px solid {status-color}",
+        "shadow": "shadow-sm",
+        "hover": "scale-105, shadow-lg"
+      },
+      "status_dot": {
+        "size": "12x12px (w-3 h-3)",
+        "position": "-top-1 -right-1",
+        "animation": "animate-pulse-slow (3s) untuk UP only"
+      },
+      "icon": {
+        "stroke_width": "1.5px",
+        "size": "28x28px (w-7 h-7)"
+      }
+    },
+    "connection_edge": {
+      "stroke_width": "3px",
+      "glow_opacity": "0.15",
+      "glow_blur": "4px",
+      "particle_duration": "3s",
+      "waypoint_color": "indigo-500/80"
+    },
+    "sidebar": {
+      "background": "bg-white/95 backdrop-blur-xl",
+      "border": "border-r border-slate-200/50",
+      "active_indicator": "Vertical line 1px, h-8, left-0, gradient emerald-teal",
+      "active_bg": "bg-emerald-50 text-emerald-700",
+      "icon_stroke": "1.5px"
+    }
+  }
+}
+,
+  "technical_constraints": {
+    "reactflow": {
+      "version": "11.x",
+      "node_size": "Must be fixed (96x96px) untuk proper edge connection",
+      "edge_path": "Polyline (straight lines) untuk avoid invalid coordinates",
+      "z_index": "Layout elements = -1, Devices = 0, Edges = auto"
+    },
+    "browser_support": {
+      "modern_browsers": "Chrome, Firefox, Safari, Edge (latest 2 versions)",
+      "features_required": [
+        "CSS backdrop-filter (glassmorphism)",
+        "SVG animations",
+        "Fullscreen API",
+        "Clipboard API"
+      ]
+    },
+    "performance_targets": {
+      "max_devices": "100-200 devices",
+      "max_connections": "200-300 connections",
+      "fps": "60fps untuk smooth animations",
+      "initial_load": "< 3s"
+    }
+  },
+  "testing_checklist": {
+    "visual": [
+      "Device nodes render correctly dengan semua types",
+      "Status colors accurate (UP, DOWN, Unknown)",
+      "Connections dengan gradient dan animations",
+      "Waypoints visible dan draggable di edit mode",
+      "Panels tidak overlapping",
+      "Responsive di mobile dan desktop"
+    ]
+  }
+}
+,
+    "functional": [
+      "Drag device untuk move position",
+      "Add connection via modal atau drawing mode",
+      "Edit connection waypoints di edit mode",
+      "Delete connection dengan confirmation",
+      "Add layout elements (Lane, Room, Divider, Label)",
+      "Manual refresh trigger MikroTik sync",
+      "Fullscreen toggle works",
+      "Context menu shows correct options",
+      "Role-based access control enforced"
+    ],
+    "performance": [
+      "Smooth animations (60fps)",
+      "No lag saat drag devices",
+      "Optimistic updates instant",
+      "Auto-refresh tidak freeze UI",
+      "Works on low-end devices"
+    ],
+    "accessibility": [
+      "All buttons have aria-label",
+      "Keyboard navigation works",
+      "Color contrast meets WCAG AA",
+      "Screen reader compatible"
+    ]
+  },
+  "files_to_modify": [
+    "app/dashboard/map/MapContent.tsx - Main map component",
+    "components/DeviceNode.tsx - Device visual design",
+    "components/ConnectionEdge.tsx - Connection visual design",
+    "components/Sidebar.tsx - Sidebar redesign",
+    "app/globals.css - Animations dan custom styles",
+    "lib/bezier-utils.ts - Color gradient utilities"
+  ]
+}
+,
+  "questions_for_ai_consultant": [
+    {
+      "category": "Visual Design",
+      "questions": [
+        "Apakah color palette Modern Minimalist (Emerald/Rose) lebih baik dari Neon (Green/Red)?",
+        "Berapa opacity ideal untuk glow effect agar subtle tapi tetap visible?",
+        "Apakah device node sebaiknya pill-shaped (rounded-2xl) atau square (rounded-lg)?",
+        "Bagaimana cara membuat glassmorphism yang performant di low-end devices?"
+      ]
+    },
+    {
+      "category": "UX Improvements",
+      "questions": [
+        "Apakah FAB (Floating Action Buttons) lebih baik dari panel kotak untuk controls?",
+        "Bagaimana positioning optimal untuk drawing mode instructions agar tidak menghalangi?",
+        "Apakah perlu micro-interactions (hover effects, transitions) di semua elements?",
+        "Bagaimana cara improve waypoint editing UX agar lebih intuitive?"
+      ]
+    },
+    {
+      "category": "Performance",
+      "questions": [
+        "Berapa duration optimal untuk particle animations (2s vs 3s vs 4s)?",
+        "Apakah perlu lazy loading untuk modals dan heavy components?",
+        "Bagaimana cara optimize rendering untuk 200+ devices dan connections?",
+        "Apakah backdrop-blur terlalu berat untuk low-end devices?"
+      ]
+    }
+  ]
+}
+,
+    {
+      "category": "Accessibility",
+      "questions": [
+        "Apakah color contrast Emerald-500/Rose-500 memenuhi WCAG AA?",
+        "Bagaimana cara improve keyboard navigation untuk waypoint editing?",
+        "Apakah perlu focus indicators yang lebih visible?",
+        "Bagaimana cara membuat drawing mode accessible untuk screen readers?"
+      ]
+    },
+    {
+      "category": "Architecture",
+      "questions": [
+        "Apakah state management dengan SWR sudah optimal atau perlu Zustand/Redux?",
+        "Bagaimana cara better organize panel positioning (constants vs computed)?",
+        "Apakah perlu component library (Radix UI, Headless UI) untuk consistency?",
+        "Bagaimana cara implement design tokens untuk easier theming?"
+      ]
+    }
+  ],
+  "expected_outcomes": [
+    "UI yang lebih modern, clean, dan profesional",
+    "Warna yang nyaman di mata untuk long-term monitoring",
+    "Performance yang smooth di semua devices",
+    "UX yang intuitive untuk semua user roles",
+    "Accessibility yang memenuhi WCAG AA",
+    "Codebase yang maintainable dan scalable"
+  ]
+}
