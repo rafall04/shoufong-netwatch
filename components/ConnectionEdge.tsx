@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { 
   EdgeProps, 
   EdgeLabelRenderer,
@@ -30,6 +30,8 @@ export default function ConnectionEdge({
 }: EdgeProps<ConnectionEdgeData>) {
   const [hoveredWaypoint, setHoveredWaypoint] = useState<number | null>(null)
   const [hoveredPath, setHoveredPath] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null)
   
   const waypoints = data?.waypoints || []
   const isEditable = data?.isEditable || false
@@ -74,6 +76,7 @@ export default function ConnectionEdge({
     if (!isEditable || !data?.onAddWaypoint) return
     
     e.stopPropagation()
+    e.preventDefault()
     
     // Get click position relative to the SVG
     const svg = (e.target as SVGElement).ownerSVGElement
@@ -88,49 +91,6 @@ export default function ConnectionEdge({
     
     // Add waypoint at double-click position
     data.onAddWaypoint(svgPoint.x, svgPoint.y)
-  }
-
-  // Waypoint drag - optimized for all devices
-  const handleWaypointMouseDown = (index: number, e: React.MouseEvent) => {
-    if (!isEditable || !data?.onWaypointDrag) return
-    
-    e.stopPropagation()
-    e.preventDefault()
-    
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      data?.onWaypointDrag?.(index, moveEvent.clientX, moveEvent.clientY)
-    }
-    
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-    
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }
-  
-  // Touch support for mobile
-  const handleWaypointTouchStart = (index: number, e: React.TouchEvent) => {
-    if (!isEditable || !data?.onWaypointDrag) return
-    
-    e.stopPropagation()
-    e.preventDefault()
-    
-    const handleTouchMove = (moveEvent: TouchEvent) => {
-      const touch = moveEvent.touches[0]
-      if (touch) {
-        data?.onWaypointDrag?.(index, touch.clientX, touch.clientY)
-      }
-    }
-    
-    const handleTouchEnd = () => {
-      document.removeEventListener('touchmove', handleTouchMove)
-      document.removeEventListener('touchend', handleTouchEnd)
-    }
-    
-    document.addEventListener('touchmove', handleTouchMove)
-    document.addEventListener('touchend', handleTouchEnd)
   }
 
   return (
@@ -193,120 +153,175 @@ export default function ConnectionEdge({
         />
       )}
       
-      {/* Waypoint markers - LARGE touch targets */}
+      {/* Waypoint markers using EdgeLabelRenderer - prevents pan issues */}
       {isEditable && waypoints.map((point, index) => (
-        <g key={`waypoint-${index}`}>
-          {/* Extra large invisible hit area for easier interaction */}
-          <circle
-            cx={point.x}
-            cy={point.y}
-            r={22}
-            fill="transparent"
-            className="cursor-move"
-            onMouseDown={(e) => handleWaypointMouseDown(index, e)}
-            onTouchStart={(e) => handleWaypointTouchStart(index, e)}
-            onMouseEnter={() => setHoveredWaypoint(index)}
-            onMouseLeave={() => setHoveredWaypoint(null)}
-          />
-          
-          {/* Outer ring when hovered - visual feedback */}
-          {hoveredWaypoint === index && (
-            <circle
-              cx={point.x}
-              cy={point.y}
-              r={14}
-              fill="none"
-              stroke={strokeColor}
-              strokeWidth={2}
-              opacity={0.3}
-              className="pointer-events-none"
-            />
-          )}
-          
-          {/* Visual waypoint - larger for easier grabbing */}
-          <circle
-            cx={point.x}
-            cy={point.y}
-            r={hoveredWaypoint === index ? 10 : 8}
-            fill="white"
-            stroke={strokeColor}
-            strokeWidth={3}
-            className="pointer-events-none"
+        <EdgeLabelRenderer key={`waypoint-${index}`}>
+          <div
+            className="nodrag nopan"
             style={{
-              transition: 'r 0.15s ease',
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${point.x}px, ${point.y}px)`,
+              pointerEvents: 'all',
+              zIndex: 1000,
             }}
-          />
-          
-          {/* Inner dot for better visibility */}
-          <circle
-            cx={point.x}
-            cy={point.y}
-            r={4}
-            fill={strokeColor}
-            className="pointer-events-none"
-          />
-          
-          {/* Delete button - larger touch target */}
-          {hoveredWaypoint === index && data?.onRemoveWaypoint && (
-            <g>
-              {/* Larger invisible hit area */}
-              <circle
-                cx={point.x + 18}
-                cy={point.y - 18}
-                r={16}
-                fill="transparent"
+            onMouseEnter={() => setHoveredWaypoint(index)}
+            onMouseLeave={() => !isDragging && setHoveredWaypoint(null)}
+          >
+            {/* Outer ring when hovered */}
+            {hoveredWaypoint === index && (
+              <div
+                className="absolute inset-0 rounded-full pointer-events-none"
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  border: `2px solid ${strokeColor}`,
+                  opacity: 0.3,
+                  transform: 'translate(-50%, -50%)',
+                  left: '50%',
+                  top: '50%',
+                }}
+              />
+            )}
+            
+            {/* Main draggable waypoint */}
+            <div
+              className="cursor-move"
+              style={{
+                width: hoveredWaypoint === index ? '20px' : '16px',
+                height: hoveredWaypoint === index ? '20px' : '16px',
+                borderRadius: '50%',
+                backgroundColor: 'white',
+                border: `3px solid ${strokeColor}`,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                transition: 'all 0.15s ease',
+                position: 'relative',
+              }}
+              onMouseDown={(e) => {
+                if (!data?.onWaypointDrag) return
+                
+                e.stopPropagation()
+                e.preventDefault()
+                setIsDragging(true)
+                
+                dragStartPos.current = { x: e.clientX, y: e.clientY }
+                
+                const handleMouseMove = (moveEvent: MouseEvent) => {
+                  moveEvent.stopPropagation()
+                  moveEvent.preventDefault()
+                  data?.onWaypointDrag?.(index, moveEvent.clientX, moveEvent.clientY)
+                }
+                
+                const handleMouseUp = (upEvent: MouseEvent) => {
+                  upEvent.stopPropagation()
+                  upEvent.preventDefault()
+                  setIsDragging(false)
+                  dragStartPos.current = null
+                  document.removeEventListener('mousemove', handleMouseMove)
+                  document.removeEventListener('mouseup', handleMouseUp)
+                }
+                
+                document.addEventListener('mousemove', handleMouseMove)
+                document.addEventListener('mouseup', handleMouseUp)
+              }}
+              onTouchStart={(e) => {
+                if (!data?.onWaypointDrag) return
+                
+                e.stopPropagation()
+                e.preventDefault()
+                setIsDragging(true)
+                
+                const touch = e.touches[0]
+                dragStartPos.current = { x: touch.clientX, y: touch.clientY }
+                
+                const handleTouchMove = (moveEvent: TouchEvent) => {
+                  moveEvent.stopPropagation()
+                  moveEvent.preventDefault()
+                  const moveTouch = moveEvent.touches[0]
+                  if (moveTouch) {
+                    data?.onWaypointDrag?.(index, moveTouch.clientX, moveTouch.clientY)
+                  }
+                }
+                
+                const handleTouchEnd = (endEvent: TouchEvent) => {
+                  endEvent.stopPropagation()
+                  endEvent.preventDefault()
+                  setIsDragging(false)
+                  dragStartPos.current = null
+                  document.removeEventListener('touchmove', handleTouchMove)
+                  document.removeEventListener('touchend', handleTouchEnd)
+                }
+                
+                document.addEventListener('touchmove', handleTouchMove, { passive: false })
+                document.addEventListener('touchend', handleTouchEnd)
+              }}
+            >
+              {/* Inner dot */}
+              <div
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: strokeColor,
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+            </div>
+            
+            {/* Delete button */}
+            {hoveredWaypoint === index && data?.onRemoveWaypoint && (
+              <div
                 className="cursor-pointer"
+                style={{
+                  position: 'absolute',
+                  top: '-18px',
+                  right: '-18px',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ef4444',
+                  border: '2px solid white',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  userSelect: 'none',
+                }}
                 onClick={(e) => {
                   e.stopPropagation()
                   data.onRemoveWaypoint?.(index)
                 }}
-              />
-              {/* Visual delete button */}
-              <circle
-                cx={point.x + 18}
-                cy={point.y - 18}
-                r={12}
-                fill="#ef4444"
-                stroke="white"
-                strokeWidth={2}
-                className="pointer-events-none"
-                style={{
-                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
-                }}
-              />
-              <text
-                x={point.x + 18}
-                y={point.y - 12}
-                textAnchor="middle"
-                fill="white"
-                fontSize="14"
-                fontWeight="bold"
-                className="pointer-events-none select-none"
               >
                 ×
-              </text>
-            </g>
-          )}
-          
-          {/* Waypoint number label */}
-          {hoveredWaypoint === index && (
-            <text
-              x={point.x}
-              y={point.y - 20}
-              textAnchor="middle"
-              fill={strokeColor}
-              fontSize="11"
-              fontWeight="bold"
-              className="pointer-events-none select-none"
-              style={{
-                filter: 'drop-shadow(0 1px 2px rgba(255,255,255,0.8))'
-              }}
-            >
-              #{index + 1}
-            </text>
-          )}
-        </g>
+              </div>
+            )}
+            
+            {/* Waypoint number label */}
+            {hoveredWaypoint === index && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '-30px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  color: strokeColor,
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  textShadow: '0 1px 2px rgba(255,255,255,0.8)',
+                  whiteSpace: 'nowrap',
+                  pointerEvents: 'none',
+                }}
+              >
+                #{index + 1}
+              </div>
+            )}
+          </div>
+        </EdgeLabelRenderer>
       ))}
       
       {/* Label */}
