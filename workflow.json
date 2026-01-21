@@ -1,0 +1,898 @@
+{
+  "project": {
+    "name": "MikroTik Dashboard",
+    "version": "1.0.0",
+    "description": "Network device monitoring and management dashboard with real-time status tracking",
+    "tech_stack": {
+      "frontend": ["Next.js 14", "React 18", "TypeScript 5", "Tailwind CSS 3"],
+      "backend": ["Next.js API Routes", "Prisma 5", "PostgreSQL"],
+      "libraries": ["ReactFlow", "SWR", "NextAuth.js", "Lucide Icons"],
+      "tools": ["Vitest", "ESLint", "Prettier"]
+    }
+  },
+  "workflows": {
+    "setup": {
+      "name": "Initial Setup",
+      "steps": [
+        {
+          "step": 1,
+          "name": "Clone Repository",
+          "commands": ["git clone <repository-url>", "cd mikrotik-dashboard"],
+          "description": "Clone project dari GitHub"
+        },
+        {
+          "step": 2,
+          "name": "Install Dependencies",
+          "commands": ["npm install"],
+          "description": "Install semua dependencies yang diperlukan"
+        },
+        {
+          "step": 3,
+          "name": "Setup Environment Variables",
+          "commands": ["cp .env.example .env"],
+          "description": "Copy dan configure environment variables",
+          "required_vars": [
+            "DATABASE_URL",
+            "NEXTAUTH_SECRET",
+            "NEXTAUTH_URL",
+            "MIKROTIK_IP",
+            "MIKROTIK_USER",
+            "MIKROTIK_PASS"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Setup Database",
+          "commands": [
+            "npx prisma migrate dev",
+            "npx prisma generate",
+            "npx prisma db seed"
+          ],
+          "description": "Setup database schema dan seed initial data"
+        },
+        {
+          "step": 5,
+          "name": "Start Development Server",
+          "commands": ["npm run dev"],
+          "description": "Jalankan development server di http://localhost:3000"
+        }
+      ]
+    },
+    "development": {
+      "name": "Development Workflow",
+      "steps": [
+        {
+          "step": 1,
+          "name": "Create Feature Branch",
+          "commands": ["git checkout -b feature/feature-name"],
+          "description": "Buat branch baru untuk fitur (optional, bisa langsung ke main)"
+        },
+        {
+          "step": 2,
+          "name": "Write Code",
+          "description": "Implementasi fitur sesuai requirements",
+          "checklist": [
+            "Follow master-development-rules.md",
+            "Follow ui-standards.md",
+            "Follow responsive-design-rules.md",
+            "Use TypeScript strict mode",
+            "Add accessibility attributes",
+            "Write self-documenting code",
+            "Add inline comments for complex logic"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Verify Code Quality",
+          "commands": ["getDiagnostics(['modified-files'])"],
+          "description": "Check for TypeScript errors, linting issues",
+          "checklist": [
+            "Zero TypeScript errors",
+            "No console.log statements",
+            "No commented-out code",
+            "Proper type definitions",
+            "No 'any' types"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Test Manually",
+          "description": "Test fitur di berbagai devices",
+          "checklist": [
+            "Test on mobile (< 640px)",
+            "Test on tablet (640-767px)",
+            "Test on desktop (≥ 768px)",
+            "Test all user roles (ADMIN, OPERATOR, VIEWER)",
+            "Test error states",
+            "Test loading states",
+            "Test keyboard navigation",
+            "Test screen reader compatibility"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Commit and Push",
+          "commands": [
+            "git add .",
+            "git commit -m 'feat: descriptive message'",
+            "git push origin main"
+          ],
+          "description": "Commit dan push ke GitHub (MANDATORY setelah setiap perubahan)",
+          "commit_types": [
+            "feat: New feature",
+            "fix: Bug fix",
+            "style: UI/styling changes",
+            "refactor: Code refactoring",
+            "perf: Performance improvement",
+            "test: Adding tests",
+            "docs: Documentation",
+            "chore: Maintenance",
+            "db: Database changes"
+          ]
+        }
+      ]
+    },
+    "feature_implementation": {
+      "name": "Feature Implementation Workflow",
+      "steps": [
+        {
+          "step": 1,
+          "name": "Understand Requirements",
+          "description": "Pahami requirement dan scope fitur",
+          "checklist": [
+            "Read user request carefully",
+            "Identify affected components",
+            "Check existing patterns",
+            "Plan implementation approach"
+          ]
+        },
+        {
+          "step": 2,
+          "name": "Database Changes (if needed)",
+          "commands": [
+            "Edit prisma/schema.prisma",
+            "npx prisma migrate dev --name migration_name",
+            "npx prisma generate",
+            "sleep 5"
+          ],
+          "description": "Update database schema jika diperlukan"
+        },
+        {
+          "step": 3,
+          "name": "Create API Endpoints (if needed)",
+          "description": "Buat API routes di app/api/",
+          "pattern": {
+            "location": "app/api/[resource]/route.ts",
+            "methods": ["GET", "POST", "PUT", "DELETE"],
+            "structure": [
+              "Import dependencies",
+              "Check authentication",
+              "Check authorization (role-based)",
+              "Validate input",
+              "Execute database operations",
+              "Return consistent response format",
+              "Handle errors properly"
+            ]
+          }
+        },
+        {
+          "step": 4,
+          "name": "Create/Update Components",
+          "description": "Buat atau update React components",
+          "checklist": [
+            "Use TypeScript with proper types",
+            "Follow component structure pattern",
+            "Add accessibility attributes",
+            "Make responsive (mobile-first)",
+            "Use SWR for data fetching",
+            "Implement loading states",
+            "Implement error states",
+            "Add proper event handlers"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Style Components",
+          "description": "Apply styling dengan Tailwind CSS",
+          "checklist": [
+            "Follow spacing system (4px base)",
+            "Use color palette consistently",
+            "Responsive typography",
+            "Proper hover/focus states",
+            "Touch-friendly targets (40x40px mobile)",
+            "No overlapping elements",
+            "Proper z-index management"
+          ]
+        },
+        {
+          "step": 6,
+          "name": "Verify and Test",
+          "commands": ["getDiagnostics(['all-modified-files'])"],
+          "description": "Verify code quality dan test functionality",
+          "checklist": [
+            "Zero TypeScript errors",
+            "All features working",
+            "Responsive on all devices",
+            "Accessible (keyboard, screen reader)",
+            "No performance issues",
+            "No console errors"
+          ]
+        },
+        {
+          "step": 7,
+          "name": "Commit and Push",
+          "commands": [
+            "git add .",
+            "git commit -m 'feat: add [feature-name]'",
+            "git push origin main"
+          ],
+          "description": "Push ke GitHub immediately"
+        }
+      ]
+    },
+    "bug_fix": {
+      "name": "Bug Fix Workflow",
+      "steps": [
+        {
+          "step": 1,
+          "name": "Reproduce Bug",
+          "description": "Reproduce bug untuk understand root cause",
+          "checklist": [
+            "Identify steps to reproduce",
+            "Check browser console for errors",
+            "Check network tab for API errors",
+            "Check database for data issues",
+            "Test on different devices/browsers"
+          ]
+        },
+        {
+          "step": 2,
+          "name": "Identify Root Cause",
+          "description": "Find exact cause of the bug",
+          "tools": [
+            "Browser DevTools",
+            "React DevTools",
+            "getDiagnostics",
+            "Console logs (temporary)",
+            "Database queries"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Fix the Bug",
+          "description": "Implement fix dengan minimal changes",
+          "checklist": [
+            "Fix root cause, not symptoms",
+            "Keep changes minimal",
+            "Don't introduce new bugs",
+            "Follow coding standards",
+            "Add comments explaining fix"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Verify Fix",
+          "commands": ["getDiagnostics(['modified-files'])"],
+          "description": "Verify bug is fixed dan no new issues",
+          "checklist": [
+            "Bug is resolved",
+            "No TypeScript errors",
+            "No new bugs introduced",
+            "Works on all devices",
+            "No performance regression"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Commit and Push",
+          "commands": [
+            "git add .",
+            "git commit -m 'fix: resolve [bug-description]'",
+            "git push origin main"
+          ],
+          "description": "Push fix ke GitHub immediately"
+        }
+      ]
+    },
+    "ui_update": {
+      "name": "UI/UX Update Workflow",
+      "steps": [
+        {
+          "step": 1,
+          "name": "Review UI Standards",
+          "description": "Review ui-standards.md dan responsive-design-rules.md",
+          "checklist": [
+            "Spacing system (8px minimum gap)",
+            "Color palette",
+            "Typography scale",
+            "Button standards",
+            "Panel positioning",
+            "Responsive breakpoints"
+          ]
+        },
+        {
+          "step": 2,
+          "name": "Implement UI Changes",
+          "description": "Update components dengan new styling",
+          "checklist": [
+            "Use Tailwind CSS classes",
+            "Follow spacing system",
+            "Use color palette",
+            "Responsive (mobile-first)",
+            "Accessibility attributes",
+            "Smooth transitions",
+            "No heavy animations"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Test Responsiveness",
+          "description": "Test di semua screen sizes",
+          "devices": [
+            "Mobile (< 640px)",
+            "Tablet (640-767px)",
+            "Desktop (≥ 768px)",
+            "Large (≥ 1024px)"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Verify Accessibility",
+          "description": "Check accessibility compliance",
+          "checklist": [
+            "Color contrast (4.5:1 minimum)",
+            "Keyboard navigation works",
+            "Screen reader compatible",
+            "Focus indicators visible",
+            "Touch targets (40x40px mobile)"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Commit and Push",
+          "commands": [
+            "git add .",
+            "git commit -m 'style: improve [component-name] UI'",
+            "git push origin main"
+          ],
+          "description": "Push ke GitHub immediately"
+        }
+      ]
+    },
+    "database_migration": {
+      "name": "Database Migration Workflow",
+      "steps": [
+        {
+          "step": 1,
+          "name": "Update Schema",
+          "description": "Edit prisma/schema.prisma",
+          "checklist": [
+            "Add/modify models",
+            "Add proper relations",
+            "Add indexes for performance",
+            "Add default values",
+            "Add validation constraints"
+          ]
+        },
+        {
+          "step": 2,
+          "name": "Create Migration",
+          "commands": ["npx prisma migrate dev --name descriptive_name"],
+          "description": "Generate migration file"
+        },
+        {
+          "step": 3,
+          "name": "Generate Prisma Client",
+          "commands": ["npx prisma generate", "sleep 5"],
+          "description": "Regenerate Prisma client dan wait for TypeScript"
+        },
+        {
+          "step": 4,
+          "name": "Update Code",
+          "description": "Update code yang menggunakan database",
+          "checklist": [
+            "Update API routes",
+            "Update components",
+            "Update types",
+            "Update queries"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Verify Changes",
+          "commands": ["getDiagnostics(['all-affected-files'])"],
+          "description": "Check for TypeScript errors"
+        },
+        {
+          "step": 6,
+          "name": "Test Database Operations",
+          "description": "Test CRUD operations",
+          "checklist": [
+            "Create works",
+            "Read works",
+            "Update works",
+            "Delete works",
+            "Relations work",
+            "Indexes work"
+          ]
+        },
+        {
+          "step": 7,
+          "name": "Commit and Push",
+          "commands": [
+            "git add .",
+            "git commit -m 'db: add [model-name] model'",
+            "git push origin main"
+          ],
+          "description": "Push ke GitHub immediately"
+        }
+      ]
+    },
+    "testing": {
+      "name": "Testing Workflow",
+      "steps": [
+        {
+          "step": 1,
+          "name": "Manual Testing",
+          "description": "Test functionality manually",
+          "checklist": [
+            "All features work as expected",
+            "No console errors",
+            "No network errors",
+            "Loading states work",
+            "Error states work",
+            "Edge cases handled"
+          ]
+        },
+        {
+          "step": 2,
+          "name": "Responsive Testing",
+          "description": "Test on different screen sizes",
+          "devices": [
+            "Mobile portrait (375x667)",
+            "Mobile landscape (667x375)",
+            "Tablet portrait (768x1024)",
+            "Tablet landscape (1024x768)",
+            "Desktop (1920x1080)"
+          ]
+        },
+        {
+          "step": 3,
+          "name": "Browser Testing",
+          "description": "Test on different browsers",
+          "browsers": [
+            "Chrome/Edge (Chromium)",
+            "Firefox",
+            "Safari (if available)"
+          ]
+        },
+        {
+          "step": 4,
+          "name": "Accessibility Testing",
+          "description": "Test accessibility features",
+          "checklist": [
+            "Keyboard navigation (Tab, Enter, Esc)",
+            "Screen reader (if available)",
+            "Color contrast",
+            "Focus indicators",
+            "ARIA labels"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Performance Testing",
+          "description": "Check performance metrics",
+          "tools": ["Lighthouse", "React DevTools Profiler"],
+          "targets": {
+            "FCP": "< 1.8s",
+            "LCP": "< 2.5s",
+            "FID": "< 100ms",
+            "CLS": "< 0.1",
+            "TTI": "< 3.8s"
+          }
+        }
+      ]
+    },
+    "deployment": {
+      "name": "Deployment Workflow",
+      "steps": [
+        {
+          "step": 1,
+          "name": "Pre-Deployment Checks",
+          "description": "Verify everything is ready",
+          "checklist": [
+            "All tests pass",
+            "Zero TypeScript errors",
+            "No console.log statements",
+            "Environment variables configured",
+            "Database migrations applied",
+            "Build succeeds locally"
+          ]
+        },
+        {
+          "step": 2,
+          "name": "Build Application",
+          "commands": ["npm run build"],
+          "description": "Build production bundle"
+        },
+        {
+          "step": 3,
+          "name": "Test Production Build",
+          "commands": ["npm run start"],
+          "description": "Test production build locally"
+        },
+        {
+          "step": 4,
+          "name": "Deploy to Server",
+          "description": "Deploy ke production server",
+          "methods": [
+            "Vercel (recommended for Next.js)",
+            "Manual deployment (Ubuntu server)",
+            "Docker container"
+          ]
+        },
+        {
+          "step": 5,
+          "name": "Run Database Migrations",
+          "commands": ["npx prisma migrate deploy"],
+          "description": "Apply migrations to production database"
+        },
+        {
+          "step": 6,
+          "name": "Verify Deployment",
+          "description": "Check production site",
+          "checklist": [
+            "Site is accessible",
+            "All pages load",
+            "API endpoints work",
+            "Database connections work",
+            "Authentication works",
+            "Real-time updates work"
+          ]
+        },
+        {
+          "step": 7,
+          "name": "Monitor",
+          "description": "Monitor for issues",
+          "checklist": [
+            "Check error logs",
+            "Monitor performance",
+            "Check database queries",
+            "Monitor API response times",
+            "Check user reports"
+          ]
+        }
+      ]
+    },
+    "code_review": {
+      "name": "Code Review Checklist",
+      "categories": {
+        "code_quality": {
+          "name": "Code Quality",
+          "checklist": [
+            "No console.log statements",
+            "No commented-out code",
+            "Proper TypeScript types (no 'any')",
+            "Meaningful variable names",
+            "Functions < 20 lines",
+            "Files < 300 lines",
+            "DRY principle followed",
+            "SOLID principles followed"
+          ]
+        },
+        "ui_ux": {
+          "name": "UI/UX",
+          "checklist": [
+            "Follows design system",
+            "Responsive on all devices",
+            "Accessible (WCAG AA)",
+            "No overlapping elements",
+            "Proper spacing (8px minimum)",
+            "Loading states implemented",
+            "Error states implemented",
+            "Smooth transitions"
+          ]
+        },
+        "performance": {
+          "name": "Performance",
+          "checklist": [
+            "No unnecessary re-renders",
+            "Images optimized",
+            "Code split appropriately",
+            "No memory leaks",
+            "Fast on low-end devices",
+            "Bundle size acceptable",
+            "API calls optimized"
+          ]
+        },
+        "security": {
+          "name": "Security",
+          "checklist": [
+            "Input validated",
+            "Authentication checked",
+            "Authorization checked (role-based)",
+            "No secrets in code",
+            "SQL injection prevented",
+            "XSS prevented",
+            "CSRF protection enabled"
+          ]
+        },
+        "testing": {
+          "name": "Testing",
+          "checklist": [
+            "TypeScript compiles",
+            "Linting passes",
+            "getDiagnostics clean",
+            "Manual testing done",
+            "Works on all devices",
+            "Works on all browsers"
+          ]
+        }
+      }
+    },
+    "maintenance": {
+      "name": "Maintenance Workflow",
+      "tasks": {
+        "dependency_updates": {
+          "name": "Update Dependencies",
+          "frequency": "Monthly",
+          "steps": [
+            "Check for outdated packages: npm outdated",
+            "Update packages: npm update",
+            "Test thoroughly after updates",
+            "Commit: chore: update dependencies"
+          ]
+        },
+        "database_optimization": {
+          "name": "Database Optimization",
+          "frequency": "Quarterly",
+          "steps": [
+            "Analyze slow queries",
+            "Add indexes where needed",
+            "Clean up old data",
+            "Optimize table structure"
+          ]
+        },
+        "performance_audit": {
+          "name": "Performance Audit",
+          "frequency": "Monthly",
+          "steps": [
+            "Run Lighthouse audit",
+            "Check bundle size",
+            "Analyze React performance",
+            "Optimize bottlenecks"
+          ]
+        },
+        "security_audit": {
+          "name": "Security Audit",
+          "frequency": "Quarterly",
+          "steps": [
+            "Check for security vulnerabilities: npm audit",
+            "Update security patches",
+            "Review authentication/authorization",
+            "Check for exposed secrets"
+          ]
+        }
+      }
+    }
+  },
+  "project_structure": {
+    "app": {
+      "description": "Next.js 14 App Router",
+      "subdirectories": {
+        "api": "API routes (backend endpoints)",
+        "dashboard": "Dashboard pages (map, users, devices)",
+        "login": "Login page"
+      }
+    },
+    "components": {
+      "description": "React components",
+      "files": [
+        "DeviceNode.tsx - ReactFlow device node",
+        "DeviceTable.tsx - Device list table",
+        "DeviceForm.tsx - Device form",
+        "ConnectionEdge.tsx - ReactFlow connection edge",
+        "Sidebar.tsx - Dashboard sidebar",
+        "StatusHistoryTimeline.tsx - Status history timeline"
+      ]
+    },
+    "lib": {
+      "description": "Utility functions and helpers",
+      "files": [
+        "auth.ts - Authentication utilities",
+        "db.ts - Database client",
+        "utils.ts - General utilities"
+      ]
+    },
+    "prisma": {
+      "description": "Database schema and migrations",
+      "files": [
+        "schema.prisma - Database schema",
+        "migrations/ - Database migrations"
+      ]
+    },
+    "hooks": {
+      "description": "Custom React hooks",
+      "files": [
+        "useDevices.ts - Device data fetching",
+        "useClickOutside.ts - Click outside handler"
+      ]
+    }
+  },
+  "key_features": {
+    "device_management": {
+      "name": "Device Management",
+      "description": "CRUD operations untuk network devices",
+      "components": ["DeviceTable", "DeviceForm", "DeviceFormModal"],
+      "api_endpoints": [
+        "GET /api/devices - List all devices",
+        "POST /api/devices - Create device",
+        "PUT /api/devices/[id] - Update device",
+        "DELETE /api/devices/[id] - Delete device"
+      ]
+    },
+    "network_map": {
+      "name": "Network Map",
+      "description": "Visual network topology dengan ReactFlow",
+      "components": ["MapContent", "DeviceNode", "ConnectionEdge", "LayoutNode"],
+      "features": [
+        "Drag and drop devices",
+        "Real-time status updates",
+        "Room and lane visualization",
+        "Device connections",
+        "Export/import layout",
+        "Snap to grid",
+        "Fullscreen mode"
+      ]
+    },
+    "user_management": {
+      "name": "User Management",
+      "description": "User authentication dan role-based access",
+      "roles": ["ADMIN", "OPERATOR", "VIEWER"],
+      "permissions": {
+        "ADMIN": "Full access (create, read, update, delete)",
+        "OPERATOR": "Create, read, update (no delete)",
+        "VIEWER": "Read only"
+      }
+    },
+    "status_monitoring": {
+      "name": "Status Monitoring",
+      "description": "Real-time device status monitoring",
+      "features": [
+        "Auto-refresh every 5 seconds (SWR)",
+        "Status history tracking",
+        "Timeline visualization",
+        "Up/down notifications"
+      ]
+    },
+    "mikrotik_integration": {
+      "name": "MikroTik Integration",
+      "description": "Integration dengan MikroTik RouterOS API",
+      "features": [
+        "Netwatch synchronization",
+        "Device status polling",
+        "Custom netwatch configuration",
+        "Automatic device discovery"
+      ]
+    }
+  },
+  "best_practices": {
+    "coding": [
+      "Use TypeScript strict mode",
+      "Follow master-development-rules.md",
+      "Write self-documenting code",
+      "Add inline comments for complex logic",
+      "Use meaningful variable names",
+      "Keep functions small (< 20 lines)",
+      "Follow DRY principle",
+      "Use proper error handling"
+    ],
+    "ui_ux": [
+      "Follow ui-standards.md",
+      "Mobile-first responsive design",
+      "Accessibility (WCAG AA)",
+      "Consistent spacing (8px minimum)",
+      "Proper color usage",
+      "Loading and error states",
+      "Smooth transitions",
+      "Touch-friendly targets (40x40px)"
+    ],
+    "performance": [
+      "Use SWR for data fetching",
+      "Implement proper caching",
+      "Optimize images",
+      "Code splitting",
+      "Lazy loading",
+      "Memoization (useMemo, useCallback)",
+      "Avoid unnecessary re-renders"
+    ],
+    "security": [
+      "Validate all inputs",
+      "Check authentication",
+      "Check authorization (role-based)",
+      "Never expose secrets",
+      "Prevent SQL injection",
+      "Prevent XSS",
+      "Use HTTPS in production"
+    ]
+  },
+  "common_commands": {
+    "development": {
+      "start_dev": "npm run dev",
+      "build": "npm run build",
+      "start_prod": "npm run start",
+      "lint": "npm run lint",
+      "type_check": "npm run type-check"
+    },
+    "database": {
+      "migrate": "npx prisma migrate dev",
+      "generate": "npx prisma generate",
+      "studio": "npx prisma studio",
+      "seed": "npx prisma db seed",
+      "reset": "npx prisma migrate reset"
+    },
+    "git": {
+      "status": "git status",
+      "add_all": "git add .",
+      "commit": "git commit -m 'type: message'",
+      "push": "git push origin main",
+      "pull": "git pull origin main"
+    }
+  },
+  "troubleshooting": {
+    "typescript_errors": {
+      "problem": "TypeScript errors after schema changes",
+      "solution": [
+        "npx prisma generate",
+        "sleep 5",
+        "getDiagnostics(['affected-files'])"
+      ]
+    },
+    "ui_overlapping": {
+      "problem": "UI elements overlapping",
+      "solution": [
+        "Check panel positioning calculations",
+        "Verify marginTop values",
+        "Test on mobile (hamburger menu)",
+        "Refer to ui-design-rules.md"
+      ]
+    },
+    "performance_issues": {
+      "problem": "Slow rendering or high CPU usage",
+      "solution": [
+        "Check for unnecessary re-renders (React DevTools)",
+        "Verify useCallback/useMemo usage",
+        "Remove heavy effects (backdrop-blur)",
+        "Optimize images",
+        "Check bundle size"
+      ]
+    },
+    "mobile_display": {
+      "problem": "Layout broken on mobile",
+      "solution": [
+        "Test on actual devices",
+        "Verify touch targets (40x40px)",
+        "Check hamburger menu positioning",
+        "Ensure no horizontal scrolling",
+        "Test with slow 3G"
+      ]
+    }
+  },
+  "resources": {
+    "documentation": [
+      "Next.js: https://nextjs.org/docs",
+      "React: https://react.dev",
+      "TypeScript: https://www.typescriptlang.org/docs",
+      "Tailwind CSS: https://tailwindcss.com/docs",
+      "Prisma: https://www.prisma.io/docs",
+      "ReactFlow: https://reactflow.dev/docs",
+      "SWR: https://swr.vercel.app/"
+    ],
+    "tools": [
+      "Lighthouse: Performance auditing",
+      "React DevTools: React debugging",
+      "Prisma Studio: Database GUI",
+      "axe DevTools: Accessibility testing"
+    ]
+  }
+}

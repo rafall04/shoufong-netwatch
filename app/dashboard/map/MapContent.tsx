@@ -905,7 +905,7 @@ function MapContentInner() {
     
     setNodes(flowNodes)
     setEdges(flowEdges)
-  }, [data, layoutData, connectionsData, setNodes, setEdges, session, editMode, isDrawingMode, drawingSourceId, handleLabelChange, deleteSelectedNode, handleWaypointDrag, handleAddWaypoint, handleRemoveWaypoint, startDrawingConnection, finalizeConnection])
+  }, [data, layoutData, connectionsData, setNodes, setEdges, session, editMode, isDrawingMode, drawingSourceId, isLocked, handleLabelChange, deleteSelectedNode, handleWaypointDrag, handleAddWaypoint, handleRemoveWaypoint, startDrawingConnection, finalizeConnection])
   
   if (error) {
     return (
