@@ -304,14 +304,17 @@ function MapContentInner() {
     }
   }, [mutateConnections])
   
-  // Handle waypoint drag
-  const handleWaypointDrag = useCallback(async (
+  // Handle waypoint drag - OPTIMIZED: Update local state immediately, save to DB on drag end
+  const handleWaypointDrag = useCallback((
     connectionId: string,
     waypointIndex: number,
     screenX: number,
-    screenY: number
+    screenY: number,
+    isDragEnd: boolean = false
   ) => {
-    const connection = connectionsData?.connections.find(c => c.id === connectionId)
+    if (!connectionsData?.connections) return
+    
+    const connection = connectionsData.connections.find(c => c.id === connectionId)
     if (!connection) return
     
     // Convert screen coordinates to flow coordinates
@@ -325,15 +328,35 @@ function MapContentInner() {
     if (waypoints[waypointIndex]) {
       waypoints[waypointIndex] = { x: position.x, y: position.y }
       
-      await handleUpdateConnection({
-        id: connectionId,
-        label: connection.label || undefined,
-        type: connection.type,
-        animated: connection.animated,
-        waypoints
+      // Update local state immediately for instant feedback
+      const updatedConnections = connectionsData.connections.map(conn => {
+        if (conn.id === connectionId) {
+          return {
+            ...conn,
+            waypoints: JSON.stringify(waypoints)
+          }
+        }
+        return conn
       })
+      
+      // Optimistic update - mutate SWR cache immediately
+      mutateConnections({ connections: updatedConnections }, false)
+      
+      // Only save to database when drag ends
+      if (isDragEnd) {
+        handleUpdateConnection({
+          id: connectionId,
+          label: connection.label || undefined,
+          type: connection.type,
+          animated: connection.animated,
+          waypoints
+        }).then(() => {
+          // Revalidate after save
+          mutateConnections()
+        })
+      }
     }
-  }, [connectionsData, reactFlowInstance, handleUpdateConnection])
+  }, [connectionsData, reactFlowInstance, handleUpdateConnection, mutateConnections])
   
   // Add waypoint to connection (double-click on path)
   const handleAddWaypoint = useCallback(async (
@@ -610,8 +633,8 @@ function MapContentInner() {
             targetStatus,
             waypoints,
             isEditable: editMode && session?.user?.role !== 'VIEWER',
-            onWaypointDrag: (index: number, x: number, y: number) => {
-              handleWaypointDrag(connection.id, index, x, y)
+            onWaypointDrag: (index: number, x: number, y: number, isDragEnd: boolean) => {
+              handleWaypointDrag(connection.id, index, x, y, isDragEnd)
             },
             onAddWaypoint: (flowX: number, flowY: number) => {
               handleAddWaypoint(connection.id, flowX, flowY)

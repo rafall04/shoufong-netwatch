@@ -13,7 +13,7 @@ interface ConnectionEdgeData {
   sourceStatus?: string
   targetStatus?: string
   waypoints?: Array<{ x: number; y: number }>
-  onWaypointDrag?: (index: number, x: number, y: number) => void
+  onWaypointDrag?: (index: number, x: number, y: number, isDragEnd: boolean) => void
   onRemoveWaypoint?: (index: number) => void
   onAddWaypoint?: (x: number, y: number) => void
   isEditable?: boolean
@@ -208,13 +208,16 @@ export default function ConnectionEdge({
                 const handleMouseMove = (moveEvent: MouseEvent) => {
                   moveEvent.stopPropagation()
                   moveEvent.preventDefault()
-                  data?.onWaypointDrag?.(index, moveEvent.clientX, moveEvent.clientY)
+                  // Update during drag - no DB save
+                  data?.onWaypointDrag?.(index, moveEvent.clientX, moveEvent.clientY, false)
                 }
                 
                 const handleMouseUp = (upEvent: MouseEvent) => {
                   upEvent.stopPropagation()
                   upEvent.preventDefault()
                   setIsDragging(false)
+                  // Final update - save to DB
+                  data?.onWaypointDrag?.(index, upEvent.clientX, upEvent.clientY, true)
                   dragStartPos.current = null
                   document.removeEventListener('mousemove', handleMouseMove)
                   document.removeEventListener('mouseup', handleMouseUp)
@@ -238,7 +241,8 @@ export default function ConnectionEdge({
                   moveEvent.preventDefault()
                   const moveTouch = moveEvent.touches[0]
                   if (moveTouch) {
-                    data?.onWaypointDrag?.(index, moveTouch.clientX, moveTouch.clientY)
+                    // Update during drag - no DB save
+                    data?.onWaypointDrag?.(index, moveTouch.clientX, moveTouch.clientY, false)
                   }
                 }
                 
@@ -246,6 +250,11 @@ export default function ConnectionEdge({
                   endEvent.stopPropagation()
                   endEvent.preventDefault()
                   setIsDragging(false)
+                  const endTouch = endEvent.changedTouches[0]
+                  if (endTouch) {
+                    // Final update - save to DB
+                    data?.onWaypointDrag?.(index, endTouch.clientX, endTouch.clientY, true)
+                  }
                   dragStartPos.current = null
                   document.removeEventListener('touchmove', handleTouchMove)
                   document.removeEventListener('touchend', handleTouchEnd)
