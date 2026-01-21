@@ -140,6 +140,7 @@ export default function ConnectionEdge({
     if (!isEditable || !data?.onRemoveWaypoint) return
     
     e.stopPropagation()
+    e.preventDefault()
     data.onRemoveWaypoint(index)
   }, [isEditable, data])
 
@@ -216,6 +217,11 @@ export default function ConnectionEdge({
                 onTouchStart={(e) => handleWaypointDragStart(e, index)}
                 onMouseEnter={() => !isDragging && setHoveredWaypoint(index)}
                 onMouseLeave={() => !isDragging && setHoveredWaypoint(null)}
+                onClick={(e) => {
+                  // Prevent click from bubbling to path
+                  e.stopPropagation()
+                  e.preventDefault()
+                }}
               >
                 {/* Simple circle marker */}
                 <div
