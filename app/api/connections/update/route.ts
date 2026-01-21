@@ -30,14 +30,15 @@ export async function POST(request: NextRequest) {
     // Build update data object
     const updateData: any = {}
     
-    if (label !== undefined) updateData.label = label
+    if (label !== undefined && label !== null) updateData.label = label
     if (type !== undefined) updateData.type = type
     if (animated !== undefined) updateData.animated = animated
     
     // CRITICAL FIX: Handle waypoints properly
-    // If waypoints is in the request body (even if undefined), update it
+    // Check if waypoints key exists in body (even if null)
     if ('waypoints' in body) {
-      updateData.waypoints = waypoints ? JSON.stringify(waypoints) : null
+      // If waypoints is null or empty array, set to null in database
+      updateData.waypoints = (waypoints && waypoints.length > 0) ? JSON.stringify(waypoints) : null
       console.log('6. Waypoints will be updated to:', updateData.waypoints)
     } else {
       console.log('6. Waypoints not in request body, will not update')

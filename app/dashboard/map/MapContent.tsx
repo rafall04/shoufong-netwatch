@@ -280,10 +280,10 @@ function MapContentInner() {
   // Update connection
   const handleUpdateConnection = useCallback(async (data: {
     id: string
-    label?: string
+    label?: string | null
     type: 'LAN' | 'WIRELESS' | 'FIBER_OPTIC'
     animated: boolean
-    waypoints?: Array<{ x: number; y: number }>
+    waypoints?: Array<{ x: number; y: number }> | null
   }) => {
     console.log('=== handleUpdateConnection DEBUG START ===')
     console.log('1. Update data received:', data)
@@ -451,14 +451,17 @@ function MapContentInner() {
     console.log('10. Waypoints after splice:', waypoints)
     console.log('11. Waypoints count after remove:', waypoints.length)
     
+    // CRITICAL FIX: Use null instead of undefined for JSON serialization
+    // JSON.stringify removes undefined fields, but keeps null fields
     const updateData = {
       id: connectionId,
-      label: connection.label || undefined,
+      label: connection.label || null,
       type: connection.type,
       animated: connection.animated,
-      waypoints: waypoints.length > 0 ? waypoints : undefined
+      waypoints: waypoints.length > 0 ? waypoints : null
     }
     console.log('12. Update data to send:', updateData)
+    console.log('12a. Update data stringified:', JSON.stringify(updateData))
     
     try {
       console.log('13. Calling handleUpdateConnection...')
