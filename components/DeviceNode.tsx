@@ -93,17 +93,17 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
     }
   }
 
-  // Status-based styling - Minimalist with clear color indicators
+  // Status-based styling - Electric vibrant colors
   const getStatusStyles = () => {
     if (status === 'up') {
       return {
-        borderColor: 'border-emerald-500',
+        borderColor: 'border-[#00e055]', // Bright Electric Green
         iconColor: 'text-emerald-600',
       }
     }
     if (status === 'down') {
       return {
-        borderColor: 'border-rose-500',
+        borderColor: 'border-[#ff2222]', // Bright Alert Red
         iconColor: 'text-rose-600',
       }
     }

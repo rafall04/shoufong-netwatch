@@ -1104,14 +1104,14 @@ function MapContentInner() {
         {/* Status Panel - Floating Island with Tabular Nums */}
         <Panel position="top-right" className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-lg">
           <div className="p-3 space-y-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {/* Status counters */}
+            {/* Status counters - Electric colors */}
             <div className="flex items-center gap-3 text-sm">
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#00e055' }}></div>
                 <span className="font-medium text-slate-900">{data?.devices?.filter(d => d.status === 'up').length || 0}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-rose-500"></div>
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#ff2222' }}></div>
                 <span className="font-medium text-slate-900">{data?.devices?.filter(d => d.status === 'down').length || 0}</span>
               </div>
               <span className="text-slate-300">|</span>
@@ -1301,15 +1301,15 @@ function MapContentInner() {
                   <div className="font-medium text-gray-600 mb-1">Status</div>
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#00e055' }}></div>
                       <span>UP</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#ff2222' }}></div>
                       <span>DOWN</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-gray-500"></div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
                       <span>Unknown</span>
                     </div>
                   </div>

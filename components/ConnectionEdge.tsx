@@ -122,21 +122,21 @@ export default function ConnectionEdge({
     return calculateMultiPointBezierPath(start, waypoints, end, 0.25)
   }, [sourceX, sourceY, targetX, targetY, waypoints])
 
-  // Status colors - Bold and clear for topology visibility
+  // Status colors - ELECTRIC vibrant palette for maximum visibility
   const sourceStatus = data?.sourceStatus || 'unknown'
   const targetStatus = data?.targetStatus || 'unknown'
   const isUp = sourceStatus === 'up' && targetStatus === 'up'
   const isDown = sourceStatus === 'down' || targetStatus === 'down'
   
-  // Get gradient colors - Bold status colors for high visibility
+  // Get gradient colors - BRIGHT electric colors that pop
   const { sourceColor, targetColor } = useMemo(() => {
     if (isDown) {
-      return { sourceColor: '#f43f5e', targetColor: '#f43f5e' } // Rose-500
+      return { sourceColor: '#ff2222', targetColor: '#ff2222' } // Bright Alert Red
     }
     if (isUp) {
-      return { sourceColor: '#10b981', targetColor: '#10b981' } // Emerald-500
+      return { sourceColor: '#00e055', targetColor: '#00e055' } // Bright Electric Green
     }
-    return { sourceColor: '#64748b', targetColor: '#64748b' } // Slate-500 (darker for visibility)
+    return { sourceColor: '#cbd5e1', targetColor: '#cbd5e1' } // Bright Silver
   }, [isUp, isDown])
   
   const gradientId = `gradient-${id}`
@@ -152,19 +152,21 @@ export default function ConnectionEdge({
         </linearGradient>
       </defs>
       
-      {/* Main connection line - SOLID and BOLD for visibility at zoom out */}
+      {/* Main connection line - ELECTRIC colors with flow animation */}
       <path
         id={id}
-        className="react-flow__edge-path"
+        className={`react-flow__edge-path ${animated && isUp ? 'animate-flow' : ''}`}
         d={edgePath}
-        strokeWidth={3} // Increased to 3px for maximum visibility
+        strokeWidth={3}
         stroke={`url(#${gradientId})`}
+        strokeLinecap="round" // Smooth liquid ends
         fill="none"
         markerEnd={markerEnd}
+        strokeDasharray={animated && isUp ? '10 10' : undefined} // Packet look for UP, solid for DOWN
         style={{
           transition: draggingWaypoint !== null ? 'none' : 'stroke 0.3s ease',
-          filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.1))', // Subtle shadow for contrast
-          zIndex: -1, // Behind nodes
+          filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.15))', // Subtle lift
+          zIndex: -1,
         }}
       />
       
@@ -181,25 +183,7 @@ export default function ConnectionEdge({
         />
       )}
       
-      {/* Animated flow effect - Only for UP status (subtle pulse) */}
-      {animated && isUp && (
-        <>
-          {/* Subtle pulse animation for active connections */}
-          <path
-            d={edgePath}
-            strokeWidth={3}
-            stroke="#10b981" // Emerald for active flow
-            fill="none"
-            className="pointer-events-none"
-            style={{
-              animation: 'dash 2s ease-in-out infinite',
-              opacity: 0.3,
-            }}
-          />
-        </>
-      )}
-      
-      {/* DOWN connections are solid and static (no animation) to indicate breakage */}
+      {/* Remove old animation - now using CSS animate-flow class */}
       
       {/* Waypoint markers - SIMPLE drag with GLOBAL listeners */}
       {isEditable && (
@@ -228,19 +212,22 @@ export default function ConnectionEdge({
                     margin: '-12px',
                   }}
                 >
-                  {/* Waypoint dot - Clean and minimal */}
+                  {/* Waypoint dot - Electric colored border */}
                   <div
                     className={`
                       relative rounded-full
-                      bg-indigo-500/80 backdrop-blur-sm
-                      border-2 border-white
+                      bg-white
+                      border-2
                       shadow-sm
                       transition-all duration-150
                       cursor-move
                       ${isDragging ? 'w-4 h-4 scale-125 shadow-md' : 
                         isHovered ? 'w-3 h-3 scale-110 shadow-sm' : 
-                        'w-2.5 h-2.5'}
+                        'w-3 h-3'}
                     `}
+                    style={{
+                      borderColor: isUp ? '#00e055' : isDown ? '#ff2222' : '#cbd5e1'
+                    }}
                     onPointerDown={(e) => handleWaypointPointerDown(e, index)}
                     title="Drag untuk geser waypoint (unlimited range)"
                   />
