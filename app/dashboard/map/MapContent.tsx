@@ -383,8 +383,48 @@ function MapContentInner() {
     
     const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
     
-    // Add waypoint at the clicked position
-    waypoints.push({ x: flowX, y: flowY })
+    // CRITICAL FIX: Insert waypoint at the correct position in the path
+    // Calculate which segment was clicked and insert waypoint there
+    
+    // Get source and target device positions
+    const sourceDevice = data?.devices.find((d: Device) => d.id === connection.sourceId)
+    const targetDevice = data?.devices.find((d: Device) => d.id === connection.targetId)
+    
+    if (!sourceDevice || !targetDevice) {
+      // Fallback: just push to end if we can't find devices
+      waypoints.push({ x: flowX, y: flowY })
+    } else {
+      // Build array of all points in the path: [source, ...waypoints, target]
+      const allPoints = [
+        { x: sourceDevice.positionX, y: sourceDevice.positionY },
+        ...waypoints,
+        { x: targetDevice.positionX, y: targetDevice.positionY }
+      ]
+      
+      // Find the closest segment to the clicked position
+      let minDistance = Infinity
+      let insertIndex = waypoints.length // Default: insert at end
+      
+      for (let i = 0; i < allPoints.length - 1; i++) {
+        const p1 = allPoints[i]
+        const p2 = allPoints[i + 1]
+        
+        // Calculate distance from click point to this segment
+        const distance = distanceToSegment(
+          { x: flowX, y: flowY },
+          p1,
+          p2
+        )
+        
+        if (distance < minDistance) {
+          minDistance = distance
+          insertIndex = i // Insert after point i (which is waypoint index i-1 if i > 0)
+        }
+      }
+      
+      // Insert waypoint at the correct position
+      waypoints.splice(insertIndex, 0, { x: flowX, y: flowY })
+    }
     
     // Optimistic update for instant feedback
     const updatedConnections = connectionsData.connections.map(conn => {
@@ -402,7 +442,7 @@ function MapContentInner() {
     // Save to database
     await handleUpdateConnection({
       id: connectionId,
-      label: connection.label || undefined,
+      label: connection.label || null,
       type: connection.type,
       animated: connection.animated,
       waypoints
@@ -410,7 +450,36 @@ function MapContentInner() {
     
     // Revalidate
     mutateConnections()
-  }, [connectionsData, handleUpdateConnection, mutateConnections])
+  }, [connectionsData, data, handleUpdateConnection, mutateConnections])
+  
+  // Helper function: Calculate distance from point to line segment
+  function distanceToSegment(
+    point: { x: number; y: number },
+    segmentStart: { x: number; y: number },
+    segmentEnd: { x: number; y: number }
+  ): number {
+    const { x: px, y: py } = point
+    const { x: x1, y: y1 } = segmentStart
+    const { x: x2, y: y2 } = segmentEnd
+    
+    const dx = x2 - x1
+    const dy = y2 - y1
+    
+    if (dx === 0 && dy === 0) {
+      // Segment is a point
+      return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2)
+    }
+    
+    // Calculate projection of point onto line
+    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)))
+    
+    // Find closest point on segment
+    const closestX = x1 + t * dx
+    const closestY = y1 + t * dy
+    
+    // Return distance
+    return Math.sqrt((px - closestX) ** 2 + (py - closestY) ** 2)
+  }
   
   // Remove waypoint from connection
   const handleRemoveWaypoint = useCallback(async (
