@@ -285,23 +285,37 @@ function MapContentInner() {
     animated: boolean
     waypoints?: Array<{ x: number; y: number }>
   }) => {
+    console.log('=== handleUpdateConnection DEBUG START ===')
+    console.log('1. Update data received:', data)
+    
     try {
+      console.log('2. Sending POST request to /api/connections/update...')
       const response = await fetch('/api/connections/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       })
       
+      console.log('3. Response status:', response.status)
+      console.log('4. Response ok:', response.ok)
+      
       const result = await response.json()
+      console.log('5. Response result:', result)
       
       if (!response.ok) {
+        console.error('❌ UPDATE FAILED: Response not ok')
         throw new Error(result.error || 'Failed to update connection')
       }
       
+      console.log('6. Calling mutateConnections to refresh data...')
       mutateConnections()
+      console.log('✅ UPDATE SUCCESS: Connection updated and data refreshed')
     } catch (error: any) {
+      console.error('❌ UPDATE ERROR:', error)
       throw error
     }
+    
+    console.log('=== handleUpdateConnection DEBUG END ===')
   }, [mutateConnections])
   
   // Handle waypoint drag - OPTIMIZED: Update local state immediately, save to DB on drag end
@@ -405,19 +419,50 @@ function MapContentInner() {
     connectionId: string,
     waypointIndex: number
   ) => {
+    console.log('=== PARENT handleRemoveWaypoint DEBUG START ===')
+    console.log('1. Connection ID:', connectionId)
+    console.log('2. Waypoint index to remove:', waypointIndex)
+    console.log('3. connectionsData exists:', !!connectionsData)
+    console.log('4. Total connections:', connectionsData?.connections.length)
+    
     const connection = connectionsData?.connections.find(c => c.id === connectionId)
-    if (!connection) return
+    console.log('5. Connection found:', !!connection)
+    
+    if (!connection) {
+      console.log('❌ REMOVE FAILED: Connection not found')
+      console.log('=== PARENT handleRemoveWaypoint DEBUG END ===')
+      return
+    }
+    
+    console.log('6. Connection data:', connection)
+    console.log('7. Current waypoints string:', connection.waypoints)
     
     const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
-    waypoints.splice(waypointIndex, 1)
+    console.log('8. Parsed waypoints before remove:', waypoints)
+    console.log('9. Waypoints count before remove:', waypoints.length)
     
-    await handleUpdateConnection({
+    waypoints.splice(waypointIndex, 1)
+    console.log('10. Waypoints after splice:', waypoints)
+    console.log('11. Waypoints count after remove:', waypoints.length)
+    
+    const updateData = {
       id: connectionId,
       label: connection.label || undefined,
       type: connection.type,
       animated: connection.animated,
       waypoints: waypoints.length > 0 ? waypoints : undefined
-    })
+    }
+    console.log('12. Update data to send:', updateData)
+    
+    try {
+      console.log('13. Calling handleUpdateConnection...')
+      await handleUpdateConnection(updateData)
+      console.log('✅ REMOVE SUCCESS: handleUpdateConnection completed')
+    } catch (error) {
+      console.error('❌ REMOVE ERROR:', error)
+    }
+    
+    console.log('=== PARENT handleRemoveWaypoint DEBUG END ===')
   }, [connectionsData, handleUpdateConnection])
   
   // Add layout element
