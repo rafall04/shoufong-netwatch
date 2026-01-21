@@ -358,13 +358,15 @@ function MapContentInner() {
     }
   }, [connectionsData, reactFlowInstance, handleUpdateConnection, mutateConnections])
   
-  // Add waypoint to connection (double-click on path)
+  // Add waypoint to connection (click on path)
   const handleAddWaypoint = useCallback(async (
     connectionId: string,
     flowX: number,
     flowY: number
   ) => {
-    const connection = connectionsData?.connections.find(c => c.id === connectionId)
+    if (!connectionsData?.connections) return
+    
+    const connection = connectionsData.connections.find(c => c.id === connectionId)
     if (!connection) return
     
     const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
@@ -372,6 +374,20 @@ function MapContentInner() {
     // Add waypoint at the clicked position
     waypoints.push({ x: flowX, y: flowY })
     
+    // Optimistic update for instant feedback
+    const updatedConnections = connectionsData.connections.map(conn => {
+      if (conn.id === connectionId) {
+        return {
+          ...conn,
+          waypoints: JSON.stringify(waypoints)
+        }
+      }
+      return conn
+    })
+    
+    mutateConnections({ connections: updatedConnections }, false)
+    
+    // Save to database
     await handleUpdateConnection({
       id: connectionId,
       label: connection.label || undefined,
@@ -379,7 +395,10 @@ function MapContentInner() {
       animated: connection.animated,
       waypoints
     })
-  }, [connectionsData, handleUpdateConnection])
+    
+    // Revalidate
+    mutateConnections()
+  }, [connectionsData, handleUpdateConnection, mutateConnections])
   
   // Handle waypoint label change
   const handleWaypointLabelChange = useCallback(async (
@@ -797,9 +816,10 @@ function MapContentInner() {
                 </label>
                 {editMode ? (
                   <div className="text-[10px] text-blue-700 mt-1 space-y-0.5">
-                    <p>✓ Double-click kabel untuk tambah waypoint</p>
+                    <p>✓ Klik kabel untuk tambah waypoint</p>
                     <p>✓ Drag waypoint untuk adjust jalur</p>
-                    <p>✓ Klik × untuk hapus waypoint</p>
+                    <p>✓ Klik label untuk edit nama lokasi</p>
+                    <p>✓ Klik kanan waypoint untuk hapus</p>
                   </div>
                 ) : (
                   <p className="text-[10px] text-gray-600 mt-1">
