@@ -122,21 +122,21 @@ export default function ConnectionEdge({
     return calculateMultiPointBezierPath(start, waypoints, end, 0.25)
   }, [sourceX, sourceY, targetX, targetY, waypoints])
 
-  // Status colors - Refined engineering palette
+  // Status colors - Bold and clear for topology visibility
   const sourceStatus = data?.sourceStatus || 'unknown'
   const targetStatus = data?.targetStatus || 'unknown'
   const isUp = sourceStatus === 'up' && targetStatus === 'up'
   const isDown = sourceStatus === 'down' || targetStatus === 'down'
   
-  // Get gradient colors - Subtle slate for normal, colored for status
+  // Get gradient colors - Bold status colors
   const { sourceColor, targetColor } = useMemo(() => {
     if (isDown) {
-      return { sourceColor: '#f43f5e', targetColor: '#f43f5e' } // Rose
+      return { sourceColor: '#f43f5e', targetColor: '#f43f5e' } // Rose-500
     }
     if (isUp) {
-      return { sourceColor: '#10b981', targetColor: '#10b981' } // Emerald
+      return { sourceColor: '#10b981', targetColor: '#10b981' } // Emerald-500
     }
-    return { sourceColor: '#cbd5e1', targetColor: '#cbd5e1' } // Slate-300
+    return { sourceColor: '#94a3b8', targetColor: '#94a3b8' } // Slate-400
   }, [isUp, isDown])
   
   const gradientId = `gradient-${id}`
@@ -157,12 +157,12 @@ export default function ConnectionEdge({
         </linearGradient>
       </defs>
       
-      {/* Main connection line - Refined and subtle */}
+      {/* Main connection line - Bold and visible */}
       <path
         id={id}
         className="react-flow__edge-path"
         d={edgePath}
-        strokeWidth={1.5} // Reduced from 4 to 1.5 for refined look
+        strokeWidth={2.5} // Increased from 1.5 to 2.5 for better visibility
         stroke={`url(#${gradientId})`}
         fill="none"
         markerEnd={markerEnd}
@@ -185,23 +185,26 @@ export default function ConnectionEdge({
         />
       )}
       
-      {/* Animated flow effect - Subtle marching ants for active connections */}
+      {/* Animated flow effect - Only for UP status (dash animation) */}
       {animated && isUp && (
         <>
-          {/* Marching ants animation */}
+          {/* Marching ants animation for active connections */}
           <path
             d={edgePath}
-            strokeWidth={1.5}
-            stroke="#6366f1" // Indigo for active flow
+            strokeWidth={2.5}
+            stroke="#10b981" // Emerald for active flow
             fill="none"
-            strokeDasharray="4 4"
+            strokeDasharray="8 4"
             className="pointer-events-none"
             style={{
               animation: 'dash 1s linear infinite',
+              opacity: 0.6,
             }}
           />
         </>
       )}
+      
+      {/* DOWN connections are solid and static (no animation) to indicate breakage */}
       
       {/* Waypoint markers - SIMPLE drag with GLOBAL listeners */}
       {isEditable && (

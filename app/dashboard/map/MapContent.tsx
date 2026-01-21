@@ -836,8 +836,8 @@ function MapContentInner() {
             },
           },
           style: {
-            width: 96, // Fixed width for proper edge connection
-            height: 96, // Fixed height for proper edge connection
+            width: 48, // Compact circular node
+            height: 72, // Height includes label space
           },
           draggable: session?.user?.role !== 'VIEWER' && !isDrawingMode,
           selectable: session?.user?.role !== 'VIEWER' && !isDrawingMode,
@@ -1086,7 +1086,7 @@ function MapContentInner() {
         )}
         
         <MiniMap position="bottom-right" />
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1.5} color="#cbd5e1" />
         
         {/* Status Panel - Floating Island with Tabular Nums */}
         <Panel position="top-right" className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-lg">

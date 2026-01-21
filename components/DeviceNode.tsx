@@ -94,22 +94,22 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
     }
   }
 
-  // Status-based styling - Clean engineering aesthetic
+  // Status-based styling - Minimalist with clear color indicators
   const getStatusStyles = () => {
     if (status === 'up') {
       return {
-        pulseColor: 'bg-emerald-500',
-        iconColor: 'text-slate-600',
+        borderColor: 'border-emerald-500',
+        iconColor: 'text-emerald-600',
       }
     }
     if (status === 'down') {
       return {
-        pulseColor: 'bg-rose-500',
-        iconColor: 'text-slate-600',
+        borderColor: 'border-rose-500',
+        iconColor: 'text-rose-600',
       }
     }
     return {
-      pulseColor: 'bg-slate-400',
+      borderColor: 'border-slate-300',
       iconColor: 'text-slate-500',
     }
   }
@@ -152,12 +152,12 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
 
   return (
     <div 
-      className={`cursor-pointer relative group ${
-        isDrawingMode ? (isDrawingSource ? 'ring-2 ring-indigo-500/50 rounded-xl' : 'ring-1 ring-slate-300 rounded-xl') : ''
+      className={`cursor-pointer relative ${
+        isDrawingMode ? (isDrawingSource ? 'ring-2 ring-indigo-500 rounded-full' : '') : ''
       }`}
       style={{
-        width: '180px', // Card token width
-        height: '96px', // Fixed height for ReactFlow
+        width: '48px', // Compact circular node
+        height: '72px', // Height includes label space
       }}
       onClick={(e) => {
         e.stopPropagation()
@@ -185,59 +185,46 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
       onMouseLeave={() => setShowTooltip(false)}
       suppressHydrationWarning
     >
-      {/* Handles positioned at center */}
+      {/* Handles positioned at center of circle */}
       <Handle 
         type="target" 
         position={Position.Top} 
         className="opacity-0"
-        style={{ top: '48px', left: '90px' }}
+        style={{ top: '24px', left: '24px' }}
       />
       
-      {/* Card Token Design */}
+      {/* Circular Icon Container - Minimalist */}
+      <div className={`
+        bg-white rounded-full 
+        w-12 h-12 
+        flex items-center justify-center 
+        shadow-md 
+        transition-transform duration-200
+        hover:scale-110
+        border-2
+        ${statusStyles.borderColor}
+      `}>
+        <div className={statusStyles.iconColor}>
+          {getIcon()}
+        </div>
+      </div>
+      
+      {/* Device Name Label - Floating Below */}
       <div className="
-        w-full h-full
-        bg-white rounded-xl 
-        border border-slate-200 
-        shadow-sm 
-        transition-all duration-200 
-        hover:shadow-md
-        hover:ring-2 hover:ring-indigo-500/20
-        flex items-center gap-3 px-3
+        absolute -bottom-6 left-1/2 -translate-x-1/2
+        w-32 text-center 
+        text-xs font-semibold text-slate-700 
+        bg-white/80 backdrop-blur-sm 
+        rounded px-1 py-0.5 
+        truncate
+        shadow-sm
       ">
-        {/* Icon Area - Left Side */}
-        <div className="flex-shrink-0 w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center">
-          <div className={statusStyles.iconColor}>
-            {getIcon()}
-          </div>
-        </div>
-        
-        {/* Info Area - Right Side */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
-          {/* Device Name */}
-          <div className="font-semibold text-slate-800 text-sm truncate">
-            {name}
-          </div>
-          
-          {/* IP Address */}
-          <div className="font-mono text-xs text-slate-500 truncate">
-            {ip}
-          </div>
-        </div>
-        
-        {/* Status Pulse Dot - Top Right Corner */}
-        <div 
-          className={`
-            absolute top-2 right-2
-            w-2.5 h-2.5 rounded-full
-            ${statusStyles.pulseColor}
-            ${status === 'up' ? 'animate-pulse-slow' : ''}
-          `}
-        />
+        {name}
       </div>
 
-      {/* Clean tooltip */}
+      {/* Compact Tooltip */}
       {showTooltip && isMounted && (
-        <div className="absolute bottom-full mb-2 z-50 pointer-events-none animate-fade-in" suppressHydrationWarning>
+        <div className="absolute top-full mt-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-fade-in" suppressHydrationWarning>
           <div className="
             bg-slate-900/95 backdrop-blur-sm
             text-white text-xs rounded-lg
@@ -252,7 +239,8 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
               <div 
                 className={`
                   w-2 h-2 rounded-full
-                  ${statusStyles.pulseColor}
+                  ${status === 'up' ? 'bg-emerald-500' : 
+                    status === 'down' ? 'bg-rose-500' : 'bg-slate-400'}
                   ${status === 'up' ? 'animate-pulse-slow' : ''}
                 `}
               />
@@ -274,7 +262,7 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
         type="source" 
         position={Position.Bottom} 
         className="opacity-0"
-        style={{ top: '48px', left: '90px' }}
+        style={{ top: '24px', left: '24px' }}
       />
     </div>
   )
