@@ -5,7 +5,6 @@ import {
   EdgeProps, 
   EdgeLabelRenderer,
 } from 'reactflow'
-import { X } from 'lucide-react'
 
 interface Waypoint {
   x: number
@@ -135,12 +134,15 @@ export default function ConnectionEdge({
     document.addEventListener('touchend', handleEnd as any)
   }, [isEditable, data])
 
-  // Handle waypoint removal
+  // Handle waypoint removal on double-click
   const handleRemoveWaypoint = useCallback((e: React.MouseEvent, index: number) => {
     if (!isEditable || !data?.onRemoveWaypoint) return
     
+    // CRITICAL: Stop all event propagation to prevent triggering add waypoint
     e.stopPropagation()
     e.preventDefault()
+    e.nativeEvent.stopImmediatePropagation()
+    
     data.onRemoveWaypoint(index)
   }, [isEditable, data])
 
@@ -218,10 +220,23 @@ export default function ConnectionEdge({
                 onMouseEnter={() => !isDragging && setHoveredWaypoint(index)}
                 onMouseLeave={() => !isDragging && setHoveredWaypoint(null)}
                 onClick={(e) => {
-                  // Prevent click from bubbling to path
+                  // CRITICAL: Prevent single click from bubbling to path (which would add waypoint)
                   e.stopPropagation()
                   e.preventDefault()
+                  e.nativeEvent.stopImmediatePropagation()
                 }}
+                onDoubleClick={(e) => {
+                  // CRITICAL: Double-click to delete waypoint
+                  // Must stop ALL propagation to prevent triggering add waypoint on line
+                  e.stopPropagation()
+                  e.preventDefault()
+                  e.nativeEvent.stopImmediatePropagation()
+                  
+                  if (isEditable && data?.onRemoveWaypoint) {
+                    data.onRemoveWaypoint(index)
+                  }
+                }}
+                title={isEditable ? "Double-click to remove waypoint" : "Waypoint"}
               >
                 {/* Simple circle marker */}
                 <div
@@ -235,18 +250,6 @@ export default function ConnectionEdge({
                     borderColor: isHovered || isDragging ? '#3b82f6' : strokeColor,
                   }}
                 />
-                
-                {/* Remove button - only show on hover in edit mode */}
-                {isEditable && isHovered && !isDragging && (
-                  <button
-                    onClick={(e) => handleRemoveWaypoint(e, index)}
-                    className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-md"
-                    title="Remove waypoint"
-                    aria-label="Remove waypoint"
-                  >
-                    <X className="w-2.5 h-2.5" />
-                  </button>
-                )}
               </div>
             </div>
           )
