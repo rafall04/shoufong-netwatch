@@ -186,21 +186,21 @@ export default function ConnectionEdge({
     setSelectedWaypoint(prev => prev === index ? null : index)
   }, [isEditable, isTouchDevice])
 
-  // Handle waypoint removal via delete button (CRITICAL: Must stop all propagation)
+  // Handle waypoint removal via delete button
   const handleRemoveWaypoint = useCallback((e: React.PointerEvent, index: number) => {
-    if (!isEditable || !data?.onRemoveWaypoint) return
-    
-    // CRITICAL: Stop ALL event propagation to prevent Ghost Click Bug
-    // This prevents the click from bubbling to the line underneath
+    // CRITICAL: Stop propagation immediately
     e.stopPropagation()
     e.preventDefault()
     
-    // Remove the waypoint
-    data.onRemoveWaypoint(index)
+    if (!isEditable || !data?.onRemoveWaypoint) return
     
-    // Clear all states
+    // Clear states first
     setHoveredWaypoint(null)
     setSelectedWaypoint(null)
+    setDraggingWaypoint(null)
+    
+    // Remove the waypoint
+    data.onRemoveWaypoint(index)
   }, [isEditable, data])
   
   // Handle group hover (desktop only)
@@ -281,137 +281,81 @@ export default function ConnectionEdge({
               style={{
                 position: 'absolute',
                 transform: `translate(-50%, -50%) translate(${waypoint.x}px, ${waypoint.y}px)`,
-                pointerEvents: 'none', // CRITICAL: Container is non-interactive
-                // CRITICAL: Very high z-index to ensure above all lines
-                zIndex: isDragging ? 9999 : (isHovered || isSelected) ? 9998 : 9997,
+                pointerEvents: 'none',
+                zIndex: 9999,
               }}
             >
-              {/* GROUP HOVER CONTAINER - Wraps dot AND button with invisible padding */}
+              {/* Hover area wrapper - larger invisible area to prevent flickering */}
               <div 
                 className="relative"
-                onPointerEnter={() => handleGroupEnter(index)}
-                onPointerLeave={handleGroupLeave}
+                onMouseEnter={() => handleGroupEnter(index)}
+                onMouseLeave={handleGroupLeave}
                 style={{
-                  // Invisible padding area (40px) to prevent flickering
-                  padding: '40px',
-                  margin: '-40px',
-                  pointerEvents: 'all', // CRITICAL: Enable interaction on group
+                  padding: '20px',
+                  margin: '-20px',
+                  pointerEvents: 'all',
                 }}
               >
-                {/* Draggable waypoint circle */}
+                {/* Waypoint dot */}
                 <div
                   className={`
+                    relative
+                    w-3 h-3 rounded-full border-2 bg-white
+                    transition-all duration-200
+                    shadow-md
                     ${isEditable ? 'cursor-move' : 'cursor-default'}
-                    ${isDragging ? 'scale-125' : (isHovered || isSelected) ? 'scale-110' : 'scale-100'}
-                    transition-transform duration-150
+                    ${isDragging ? 'scale-125 border-blue-500 shadow-lg' : 
+                      (isHovered || isSelected) ? 'scale-110 border-blue-500 shadow-lg' : 
+                      'scale-100 border-gray-400'}
                   `}
+                  style={{
+                    borderColor: (isHovered || isSelected || isDragging) ? '#3b82f6' : strokeColor,
+                  }}
                   onPointerDown={(e) => {
-                    // On touch devices, first tap selects, then can drag
                     if (isTouchDevice && !isSelected) {
                       handleWaypointClick(e, index)
                     } else {
                       handleWaypointDragStart(e, index)
                     }
                   }}
-                  title={isEditable ? "Drag to move, click X to delete" : "Waypoint"}
-                  style={{
-                    pointerEvents: 'all', // CRITICAL: Enable interaction
-                  }}
-                >
-                  {/* Circle marker */}
-                  <div
-                    className={`
-                      w-3 h-3 rounded-full border-2 bg-white
-                      transition-all duration-200
-                      shadow-md
-                      ${(isHovered || isSelected || isDragging) ? 'border-blue-500 shadow-lg' : 'border-gray-400'}
-                    `}
-                    style={{
-                      borderColor: (isHovered || isSelected || isDragging) ? '#3b82f6' : strokeColor,
-                    }}
-                  />
-                </div>
+                  title={isEditable ? "Drag to move" : "Waypoint"}
+                />
                 
-                {/* Delete button - CLOSER positioning (12px offset) */}
+                {/* Delete button - positioned very close to dot (8px offset) */}
                 {showDeleteButton && (
-                  <div
-                    className="absolute"
+                  <button
+                    className="
+                      absolute
+                      w-5 h-5
+                      flex items-center justify-center
+                      bg-red-500 hover:bg-red-600 active:bg-red-700
+                      rounded-full
+                      shadow-lg
+                      cursor-pointer
+                      transition-all duration-150
+                      hover:scale-110
+                      active:scale-95
+                    "
                     style={{
-                      // CRITICAL: Closer positioning - 12px offset from center
-                      top: '-12px',
-                      right: '-12px',
-                      pointerEvents: 'all', // CRITICAL: Enable interaction
-                      // CRITICAL: Highest z-index to be above everything
+                      top: '-8px',
+                      right: '-8px',
                       zIndex: 10000,
                     }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                      handleRemoveWaypoint(e, index)
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                    }}
+                    aria-label="Delete waypoint"
+                    title="Delete waypoint"
+                    type="button"
                   >
-                    {/* Touch-friendly button with large hit area */}
-                    <button
-                      className="
-                        relative
-                        w-10 h-10 md:w-7 md:h-7
-                        flex items-center justify-center
-                        cursor-pointer
-                        group
-                      "
-                      onPointerDown={(e) => {
-                        // CRITICAL: Stop ALL propagation FIRST
-                        e.stopPropagation()
-                        e.preventDefault()
-                        
-                        // CRITICAL: Immediate removal to prevent ghost clicks
-                        handleRemoveWaypoint(e, index)
-                      }}
-                      onPointerUp={(e) => {
-                        // CRITICAL: Stop propagation on pointer up too
-                        e.stopPropagation()
-                        e.preventDefault()
-                      }}
-                      onClick={(e) => {
-                        // CRITICAL: Stop propagation on click
-                        e.stopPropagation()
-                        e.preventDefault()
-                      }}
-                      onMouseDown={(e) => {
-                        // CRITICAL: Stop propagation on mouse down
-                        e.stopPropagation()
-                        e.preventDefault()
-                      }}
-                      onTouchStart={(e) => {
-                        // CRITICAL: Stop propagation on touch start
-                        e.stopPropagation()
-                        e.preventDefault()
-                      }}
-                      aria-label="Delete waypoint"
-                      title="Delete waypoint"
-                      type="button"
-                      style={{
-                        // CRITICAL: Ensure button is above everything
-                        position: 'relative',
-                        zIndex: 10001,
-                      }}
-                    >
-                      {/* Visible X button (centered in hit area) */}
-                      <div
-                        className="
-                          w-5 h-5 md:w-4 md:h-4
-                          flex items-center justify-center
-                          bg-red-500 hover:bg-red-600 active:bg-red-700
-                          rounded-full
-                          shadow-lg
-                          transition-all duration-150
-                          group-hover:scale-110
-                          group-active:scale-95
-                        "
-                        style={{
-                          // CRITICAL: Prevent any pointer events on child
-                          pointerEvents: 'none',
-                        }}
-                      >
-                        <X className="w-3 h-3 md:w-2.5 md:h-2.5 text-white" strokeWidth={3} />
-                      </div>
-                    </button>
-                  </div>
+                    <X className="w-3 h-3 text-white" strokeWidth={3} style={{ pointerEvents: 'none' }} />
+                  </button>
                 )}
               </div>
             </div>
