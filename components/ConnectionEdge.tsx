@@ -40,54 +40,49 @@ export default function ConnectionEdge({
   
   const waypoints = data?.waypoints || []
   const isEditable = data?.isEditable || false
-  
-  // Waypoint drag state - SIMPLE approach
-  const [dragState, setDragState] = useState<{
-    waypointIndex: number
-    startX: number
-    startY: number
-  } | null>(null)
 
-  // Handle waypoint drag start - SIMPLIFIED
+  // Handle waypoint drag start - SIMPLIFIED with GLOBAL listeners
   const handleWaypointPointerDown = useCallback((e: React.PointerEvent, index: number) => {
     if (!isEditable) return
     
     e.stopPropagation()
     e.preventDefault()
     
-    setDragState({
-      waypointIndex: index,
-      startX: e.clientX,
-      startY: e.clientY
-    })
-    
     setDraggingWaypoint(index)
-  }, [isEditable])
+    
+    // Store initial position
+    const startX = e.clientX
+    const startY = e.clientY
+    
+    // CRITICAL: Attach listeners to DOCUMENT for unlimited drag range
+    const handleMove = (moveEvent: PointerEvent) => {
+      if (!data?.onWaypointDrag) return
+      
+      // Update position in real-time
+      data.onWaypointDrag(index, moveEvent.clientX, moveEvent.clientY, false)
+    }
+    
+    const handleEnd = (endEvent: PointerEvent) => {
+      if (!data?.onWaypointDrag) return
+      
+      // Save final position to DB
+      data.onWaypointDrag(index, endEvent.clientX, endEvent.clientY, true)
+      
+      // Cleanup
+      setDraggingWaypoint(null)
+      document.removeEventListener('pointermove', handleMove)
+      document.removeEventListener('pointerup', handleEnd)
+      document.removeEventListener('pointercancel', handleEnd)
+    }
+    
+    // Attach to document for global tracking
+    document.addEventListener('pointermove', handleMove)
+    document.addEventListener('pointerup', handleEnd)
+    document.addEventListener('pointercancel', handleEnd)
+  }, [isEditable, data])
   
-  // Handle waypoint drag move - SIMPLIFIED
-  const handleWaypointPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragState || !data?.onWaypointDrag) return
-    
-    e.stopPropagation()
-    e.preventDefault()
-    
-    // Update position in real-time (no save to DB yet)
-    data.onWaypointDrag(dragState.waypointIndex, e.clientX, e.clientY, false)
-  }, [dragState, data])
-  
-  // Handle waypoint drag end - SIMPLIFIED
-  const handleWaypointPointerUp = useCallback((e: React.PointerEvent) => {
-    if (!dragState || !data?.onWaypointDrag) return
-    
-    e.stopPropagation()
-    e.preventDefault()
-    
-    // Save final position to DB
-    data.onWaypointDrag(dragState.waypointIndex, e.clientX, e.clientY, true)
-    
-    setDragState(null)
-    setDraggingWaypoint(null)
-  }, [dragState, data])
+  // Remove unused handlers
+  // handleWaypointPointerMove and handleWaypointPointerUp are now handled in handleWaypointPointerDown
   
   // Handle waypoint delete - SIMPLIFIED
   const handleWaypointDelete = useCallback((e: React.MouseEvent, index: number) => {
@@ -238,7 +233,7 @@ export default function ConnectionEdge({
         </>
       )}
       
-      {/* Waypoint markers - SIMPLE drag implementation */}
+      {/* Waypoint markers - SIMPLE drag with GLOBAL listeners */}
       {isEditable && (
         <EdgeLabelRenderer>
           {waypoints.map((waypoint, index) => {
@@ -252,11 +247,9 @@ export default function ConnectionEdge({
                 style={{
                   position: 'absolute',
                   transform: `translate(-50%, -50%) translate(${waypoint.x}px, ${waypoint.y}px)`,
-                  pointerEvents: 'all', // ENABLE pointer events
+                  pointerEvents: 'all',
                   zIndex: 9999,
                 }}
-                onPointerMove={handleWaypointPointerMove}
-                onPointerUp={handleWaypointPointerUp}
               >
                 <div 
                   className="relative"
@@ -267,7 +260,7 @@ export default function ConnectionEdge({
                     margin: '-12px',
                   }}
                 >
-                  {/* Waypoint dot - DRAGGABLE */}
+                  {/* Waypoint dot - DRAGGABLE with UNLIMITED range */}
                   <div
                     className={`
                       relative rounded-full
@@ -281,7 +274,7 @@ export default function ConnectionEdge({
                         'w-2.5 h-2.5'}
                     `}
                     onPointerDown={(e) => handleWaypointPointerDown(e, index)}
-                    title="Drag untuk geser waypoint"
+                    title="Drag untuk geser waypoint (unlimited range)"
                   >
                     {/* Inner glow */}
                     <div 
