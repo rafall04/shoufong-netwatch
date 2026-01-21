@@ -285,43 +285,27 @@ function MapContentInner() {
     animated: boolean
     waypoints?: Array<{ x: number; y: number }> | null
   }) => {
-    console.log('=== handleUpdateConnection DEBUG START ===')
-    console.log('1. Update data received:', data)
-    
     try {
-      console.log('2. Sending POST request to /api/connections/update...')
       const response = await fetch('/api/connections/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       })
       
-      console.log('3. Response status:', response.status)
-      console.log('4. Response ok:', response.ok)
-      
       const result = await response.json()
-      console.log('5. Response result:', result)
-      console.log('5a. Response connection waypoints:', result.connection?.waypoints)
-      console.log('5b. Expected waypoints (should be null or "[]"):', data.waypoints)
       
       if (!response.ok) {
-        console.error('❌ UPDATE FAILED: Response not ok')
         throw new Error(result.error || 'Failed to update connection')
       }
       
-      console.log('6. Calling mutateConnections to refresh data...')
       // Force revalidate to fetch fresh data from server
       await mutateConnections(undefined, { revalidate: true })
-      console.log('7. Waiting for data to refresh...')
       // Small delay to ensure data is refreshed
       await new Promise(resolve => setTimeout(resolve, 100))
-      console.log('✅ UPDATE SUCCESS: Connection updated and data refreshed')
     } catch (error: any) {
-      console.error('❌ UPDATE ERROR:', error)
+      console.error('Error updating connection:', error)
       throw error
     }
-    
-    console.log('=== handleUpdateConnection DEBUG END ===')
   }, [mutateConnections])
   
   // Handle waypoint drag - OPTIMIZED: Update local state immediately, save to DB on drag end
@@ -425,34 +409,12 @@ function MapContentInner() {
     connectionId: string,
     waypointIndex: number
   ) => {
-    console.log('=== PARENT handleRemoveWaypoint DEBUG START ===')
-    console.log('1. Connection ID:', connectionId)
-    console.log('2. Waypoint index to remove:', waypointIndex)
-    console.log('3. connectionsData exists:', !!connectionsData)
-    console.log('4. Total connections:', connectionsData?.connections.length)
-    
     const connection = connectionsData?.connections.find(c => c.id === connectionId)
-    console.log('5. Connection found:', !!connection)
-    
-    if (!connection) {
-      console.log('❌ REMOVE FAILED: Connection not found')
-      console.log('=== PARENT handleRemoveWaypoint DEBUG END ===')
-      return
-    }
-    
-    console.log('6. Connection data:', connection)
-    console.log('7. Current waypoints string:', connection.waypoints)
+    if (!connection) return
     
     const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
-    console.log('8. Parsed waypoints before remove:', waypoints)
-    console.log('9. Waypoints count before remove:', waypoints.length)
-    
     waypoints.splice(waypointIndex, 1)
-    console.log('10. Waypoints after splice:', waypoints)
-    console.log('11. Waypoints count after remove:', waypoints.length)
     
-    // CRITICAL FIX: Use null instead of undefined for JSON serialization
-    // JSON.stringify removes undefined fields, but keeps null fields
     const updateData = {
       id: connectionId,
       label: connection.label || null,
@@ -460,18 +422,12 @@ function MapContentInner() {
       animated: connection.animated,
       waypoints: waypoints.length > 0 ? waypoints : null
     }
-    console.log('12. Update data to send:', updateData)
-    console.log('12a. Update data stringified:', JSON.stringify(updateData))
     
     try {
-      console.log('13. Calling handleUpdateConnection...')
       await handleUpdateConnection(updateData)
-      console.log('✅ REMOVE SUCCESS: handleUpdateConnection completed')
     } catch (error) {
-      console.error('❌ REMOVE ERROR:', error)
+      console.error('Error removing waypoint:', error)
     }
-    
-    console.log('=== PARENT handleRemoveWaypoint DEBUG END ===')
   }, [connectionsData, handleUpdateConnection])
   
   // Add layout element

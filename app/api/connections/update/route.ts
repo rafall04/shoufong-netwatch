@@ -13,13 +13,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { id, label, type, animated, waypoints } = body
 
-    console.log('=== API UPDATE CONNECTION DEBUG ===')
-    console.log('1. Request body:', body)
-    console.log('2. Waypoints value:', waypoints)
-    console.log('3. Waypoints type:', typeof waypoints)
-    console.log('4. Waypoints === undefined:', waypoints === undefined)
-    console.log('5. Waypoints === null:', waypoints === null)
-
     if (!id) {
       return NextResponse.json(
         { error: 'Connection ID is required' },
@@ -34,26 +27,16 @@ export async function POST(request: NextRequest) {
     if (type !== undefined) updateData.type = type
     if (animated !== undefined) updateData.animated = animated
     
-    // CRITICAL FIX: Handle waypoints properly
-    // Check if waypoints key exists in body (even if null)
+    // CRITICAL: Handle waypoints properly - use null instead of undefined
+    // JSON.stringify removes undefined fields, but keeps null fields
     if ('waypoints' in body) {
-      // If waypoints is null or empty array, set to null in database
       updateData.waypoints = (waypoints && waypoints.length > 0) ? JSON.stringify(waypoints) : null
-      console.log('6. Waypoints will be updated to:', updateData.waypoints)
-    } else {
-      console.log('6. Waypoints not in request body, will not update')
     }
-
-    console.log('7. Final update data:', updateData)
 
     const connection = await prisma.deviceConnection.update({
       where: { id },
       data: updateData
     })
-
-    console.log('8. Updated connection waypoints:', connection.waypoints)
-    console.log('✅ API UPDATE SUCCESS')
-    console.log('=== API UPDATE CONNECTION DEBUG END ===')
 
     return NextResponse.json({ success: true, connection })
   } catch (error) {
