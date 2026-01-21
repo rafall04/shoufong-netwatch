@@ -301,6 +301,8 @@ function MapContentInner() {
       
       const result = await response.json()
       console.log('5. Response result:', result)
+      console.log('5a. Response connection waypoints:', result.connection?.waypoints)
+      console.log('5b. Expected waypoints (should be null or "[]"):', data.waypoints)
       
       if (!response.ok) {
         console.error('❌ UPDATE FAILED: Response not ok')
