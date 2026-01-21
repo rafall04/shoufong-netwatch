@@ -18,3 +18,28 @@
     animation: slide-in-right 0.3s ease-out;
   }
 }
+
+/* Custom animations for network map */
+@layer base {
+  /* Smooth hardware-accelerated animations */
+  .react-flow__edge-path {
+    will-change: stroke;
+  }
+  
+  .react-flow__node {
+    will-change: transform;
+  }
+  
+  /* Glassmorphism support */
+  @supports (backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px)) {
+    .backdrop-blur-sm {
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    
+    .backdrop-blur-md {
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  }
+}

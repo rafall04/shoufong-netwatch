@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { 
   EdgeProps, 
   EdgeLabelRenderer,
 } from 'reactflow'
 import { X } from 'lucide-react'
+import { calculateMultiPointBezierPath, calculateStatusGradient, Point } from '@/lib/bezier-utils'
 
 interface Waypoint {
   x: number
@@ -70,32 +71,26 @@ export default function ConnectionEdge({
     }
   }, [isTouchDevice, selectedWaypoint])
   
-  // Build straight line path through waypoints
-  const buildPath = useCallback(() => {
-    if (waypoints.length === 0) {
-      // No waypoints - straight line from source to target
-      return `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`
-    }
-    
-    // Build path through all waypoints
-    let path = `M ${sourceX} ${sourceY}`
-    waypoints.forEach((point) => {
-      path += ` L ${point.x} ${point.y}`
-    })
-    path += ` L ${targetX} ${targetY}`
-    
-    return path
+  // Build smooth Bezier curve path through waypoints using utility
+  const edgePath = useMemo(() => {
+    const start: Point = { x: sourceX, y: sourceY }
+    const end: Point = { x: targetX, y: targetY }
+    return calculateMultiPointBezierPath(start, waypoints, end, 0.25)
   }, [sourceX, sourceY, targetX, targetY, waypoints])
-  
-  const edgePath = buildPath()
 
-  // Status colors
+  // Status colors with gradient support using utility
   const sourceStatus = data?.sourceStatus || 'unknown'
   const targetStatus = data?.targetStatus || 'unknown'
   const isUp = sourceStatus === 'up' && targetStatus === 'up'
   const isDown = sourceStatus === 'down' || targetStatus === 'down'
   
-  const strokeColor = isUp ? '#22c55e' : isDown ? '#f87171' : '#9ca3af'
+  // Get gradient colors from utility
+  const { sourceColor, targetColor } = useMemo(
+    () => calculateStatusGradient(sourceStatus, targetStatus),
+    [sourceStatus, targetStatus]
+  )
+  
+  const gradientId = `gradient-${id}`
   const animated = data?.animated !== false
   
   // Stroke style based on type
@@ -227,18 +222,29 @@ export default function ConnectionEdge({
 
   return (
     <>
-      {/* Main connection line */}
+      {/* Define gradient for connection */}
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={sourceColor} />
+          <stop offset="100%" stopColor={targetColor} />
+        </linearGradient>
+      </defs>
+      
+      {/* Main connection line with gradient */}
       <path
         id={id}
         className="react-flow__edge-path"
         d={edgePath}
         strokeWidth={3}
-        stroke={strokeColor}
+        stroke={`url(#${gradientId})`}
         fill="none"
         markerEnd={markerEnd}
         strokeDasharray={strokeDasharray}
         style={{
-          transition: draggingWaypoint !== null ? 'none' : 'stroke 0.2s ease',
+          transition: draggingWaypoint !== null ? 'none' : 'stroke 0.3s ease',
+          filter: isUp ? 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.4))' : 
+                  isDown ? 'drop-shadow(0 0 4px rgba(239, 68, 68, 0.4))' : 
+                  'none',
         }}
       />
       
@@ -255,18 +261,54 @@ export default function ConnectionEdge({
         />
       )}
       
-      {/* Animated flow effect when connection is UP */}
+      {/* Animated flow effect - moving particles along path */}
       {animated && isUp && (
-        <path
-          d={edgePath}
-          strokeWidth={2}
-          stroke={strokeColor}
-          fill="none"
-          strokeDasharray="8 8"
-          opacity={0.6}
-          className="pointer-events-none"
-          style={{ animation: 'dash 1s linear infinite' }}
-        />
+        <>
+          {/* Particle 1 */}
+          <circle r="3" fill={sourceColor} className="pointer-events-none">
+            <animateMotion
+              dur="2s"
+              repeatCount="indefinite"
+              path={edgePath}
+            />
+            <animate
+              attributeName="opacity"
+              values="0;1;1;0"
+              dur="2s"
+              repeatCount="indefinite"
+            />
+          </circle>
+          
+          {/* Particle 2 (delayed) */}
+          <circle r="3" fill={targetColor} className="pointer-events-none">
+            <animateMotion
+              dur="2s"
+              repeatCount="indefinite"
+              path={edgePath}
+              begin="1s"
+            />
+            <animate
+              attributeName="opacity"
+              values="0;1;1;0"
+              dur="2s"
+              repeatCount="indefinite"
+              begin="1s"
+            />
+          </circle>
+          
+          {/* Glow effect on active connection */}
+          <path
+            d={edgePath}
+            strokeWidth={5}
+            stroke={`url(#${gradientId})`}
+            fill="none"
+            opacity={0.2}
+            className="pointer-events-none"
+            style={{
+              filter: 'blur(4px)',
+            }}
+          />
+        </>
       )}
       
       {/* Waypoint markers with delete button */}
@@ -305,20 +347,24 @@ export default function ConnectionEdge({
                   pointerEvents: 'all',
                 }}
               >
-                {/* Waypoint dot */}
+                {/* Waypoint dot with glassmorphism effect */}
                 <div
                   className={`
                     relative
-                    w-3 h-3 rounded-full border-2 bg-white
+                    w-4 h-4 rounded-full
+                    bg-white/80 backdrop-blur-sm
+                    border-2 shadow-lg
                     transition-all duration-200
-                    shadow-md
                     ${isEditable ? 'cursor-move' : 'cursor-default'}
-                    ${isDragging ? 'scale-125 border-blue-500 shadow-lg' : 
-                      (isHovered || isSelected) ? 'scale-110 border-blue-500 shadow-lg' : 
-                      'scale-100 border-gray-400'}
+                    ${isDragging ? 'scale-150 shadow-2xl' : 
+                      (isHovered || isSelected) ? 'scale-125 shadow-xl' : 
+                      'scale-100'}
                   `}
                   style={{
-                    borderColor: (isHovered || isSelected || isDragging) ? '#3b82f6' : strokeColor,
+                    borderColor: (isHovered || isSelected || isDragging) ? '#3b82f6' : sourceColor,
+                    boxShadow: (isHovered || isSelected || isDragging) 
+                      ? '0 0 20px rgba(59, 130, 246, 0.6), 0 4px 12px rgba(0, 0, 0, 0.2)' 
+                      : '0 2px 8px rgba(0, 0, 0, 0.15)',
                   }}
                   onPointerDown={(e) => {
                     if (isTouchDevice && !isSelected) {
@@ -328,7 +374,15 @@ export default function ConnectionEdge({
                     }
                   }}
                   title={isEditable ? "Drag to move" : "Waypoint"}
-                />
+                >
+                  {/* Inner glow */}
+                  <div 
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      background: `radial-gradient(circle, ${sourceColor}40 0%, transparent 70%)`,
+                    }}
+                  />
+                </div>
                 
                 {/* Delete button - positioned very close to dot (8px offset) */}
                 {showDeleteButton && (
