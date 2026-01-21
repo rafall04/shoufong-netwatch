@@ -11,7 +11,6 @@ interface ConnectionEditModalProps {
     label?: string | null
     type: 'LAN' | 'WIRELESS' | 'FIBER_OPTIC'
     animated: boolean
-    edgeType: 'default' | 'straight' | 'step' | 'smoothstep'
     waypoints?: string | null
   }
   sourceDevice: { name: string; ip: string }
