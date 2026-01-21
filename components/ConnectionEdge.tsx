@@ -308,21 +308,10 @@ export default function ConnectionEdge({
         </>
       )}
       
-      {/* Waypoint markers - ONLY visible in edit mode */}
+      {/* Waypoint markers - ONLY visible in edit mode - READ ONLY (no drag) */}
       {isEditable && (
         <EdgeLabelRenderer>
           {waypoints.map((waypoint, index) => {
-            const isDragging = draggingWaypoint === index
-            const isHovered = hoveredWaypoint === index
-            const isSelected = selectedWaypoint === index
-            
-            // Show delete button if:
-            // - Desktop: hovered or dragging
-            // - Mobile: selected or dragging
-            const showDeleteButton = (
-              isTouchDevice ? (isSelected || isDragging) : (isHovered || isDragging)
-            )
-            
             return (
               <div
                 key={`waypoint-${index}`}
@@ -334,86 +323,23 @@ export default function ConnectionEdge({
                   zIndex: 9999,
                 }}
               >
-                {/* Hover area wrapper - larger invisible area to prevent flickering */}
-                <div 
-                  className="relative"
-                  onMouseEnter={() => handleGroupEnter(index)}
-                  onMouseLeave={handleGroupLeave}
-                  style={{
-                    padding: '16px',
-                    margin: '-16px',
-                    pointerEvents: 'all',
-                  }}
+                {/* Waypoint dot - SMALL and SUBTLE - NO INTERACTION */}
+                <div
+                  className="
+                    w-2 h-2 rounded-full
+                    bg-blue-500/60 backdrop-blur-sm
+                    border border-blue-600
+                    shadow-sm
+                  "
+                  title={`Waypoint ${index + 1}`}
                 >
-                  {/* Waypoint dot - SMALLER and SUBTLE */}
-                  <div
-                    className={`
-                      relative
-                      rounded-full
-                      bg-white/60 backdrop-blur-sm
-                      border-2 shadow-md
-                      transition-all duration-200
-                      cursor-move
-                      ${isDragging ? 'w-4 h-4 shadow-2xl' : 
-                        (isHovered || isSelected) ? 'w-3.5 h-3.5 shadow-xl' : 
-                        'w-2.5 h-2.5'}
-                    `}
+                  {/* Inner glow */}
+                  <div 
+                    className="absolute inset-0 rounded-full"
                     style={{
-                      borderColor: (isHovered || isSelected || isDragging) ? '#3b82f6' : sourceColor,
-                      boxShadow: (isHovered || isSelected || isDragging) 
-                        ? '0 0 16px rgba(59, 130, 246, 0.5), 0 2px 8px rgba(0, 0, 0, 0.15)' 
-                        : '0 1px 4px rgba(0, 0, 0, 0.1)',
+                      background: `radial-gradient(circle, ${sourceColor}20 0%, transparent 70%)`,
                     }}
-                    onPointerDown={(e) => {
-                      if (isTouchDevice && !isSelected) {
-                        handleWaypointClick(e, index)
-                      } else {
-                        handleWaypointDragStart(e, index)
-                      }
-                    }}
-                    title="Drag to move waypoint"
-                  >
-                    {/* Inner glow - subtle */}
-                    <div 
-                      className="absolute inset-0 rounded-full"
-                      style={{
-                        background: `radial-gradient(circle, ${sourceColor}30 0%, transparent 70%)`,
-                      }}
-                    />
-                  </div>
-                  
-                  {/* Delete button - positioned close to dot */}
-                  {showDeleteButton && (
-                    <button
-                      className="
-                        absolute
-                        w-5 h-5
-                        flex items-center justify-center
-                        bg-red-500 hover:bg-red-600 active:bg-red-700
-                        rounded-full
-                        shadow-lg
-                        cursor-pointer
-                        transition-all duration-150
-                        hover:scale-110
-                        active:scale-95
-                      "
-                      style={{
-                        top: '-6px',
-                        right: '-6px',
-                        zIndex: 10000,
-                      }}
-                      onClick={(e) => handleDeleteClick(e, index)}
-                      onMouseDown={(e) => {
-                        e.stopPropagation()
-                        e.preventDefault()
-                      }}
-                      aria-label="Delete waypoint"
-                      title="Delete waypoint"
-                      type="button"
-                    >
-                      <X className="w-3 h-3 text-white" strokeWidth={3} style={{ pointerEvents: 'none' }} />
-                    </button>
-                  )}
+                  />
                 </div>
               </div>
             )

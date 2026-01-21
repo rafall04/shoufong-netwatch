@@ -39,6 +39,7 @@ export function calculateBezierPath(
 /**
  * Calculate Bezier path through multiple waypoints
  * Creates smooth curves between each segment
+ * SIMPLIFIED: Use straight lines between waypoints to avoid invalid coordinates
  */
 export function calculateMultiPointBezierPath(
   start: Point,
@@ -50,25 +51,17 @@ export function calculateMultiPointBezierPath(
     return calculateBezierPath(start, end, curvature)
   }
   
-  let path = ''
+  // SIMPLIFIED APPROACH: Use polyline (straight lines) through waypoints
+  // This ensures path is always valid and reaches the target
+  let path = `M ${start.x} ${start.y}`
   
-  // First segment: start to first waypoint
-  path += calculateBezierPath(start, waypoints[0], curvature)
-  
-  // Middle segments: waypoint to waypoint
-  for (let i = 0; i < waypoints.length - 1; i++) {
-    const segment = calculateBezierPath(waypoints[i], waypoints[i + 1], curvature)
-    // Remove 'M' from subsequent segments
-    path += ' ' + segment.substring(2)
+  // Add each waypoint as a straight line segment
+  for (const waypoint of waypoints) {
+    path += ` L ${waypoint.x} ${waypoint.y}`
   }
   
-  // Last segment: last waypoint to end
-  const lastSegment = calculateBezierPath(
-    waypoints[waypoints.length - 1],
-    end,
-    curvature
-  )
-  path += ' ' + lastSegment.substring(2)
+  // Final line to end point
+  path += ` L ${end.x} ${end.y}`
   
   return path
 }
