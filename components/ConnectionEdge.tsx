@@ -36,40 +36,89 @@ export default function ConnectionEdge({
   markerEnd,
 }: EdgeProps<ConnectionEdgeData>) {
   const [hoveredWaypoint, setHoveredWaypoint] = useState<number | null>(null)
-  const [selectedWaypoint, setSelectedWaypoint] = useState<number | null>(null)
   const [draggingWaypoint, setDraggingWaypoint] = useState<number | null>(null)
   
   const waypoints = data?.waypoints || []
   const isEditable = data?.isEditable || false
   
-  // Detect if device supports hover (desktop) or touch (mobile)
-  const [isTouchDevice, setIsTouchDevice] = useState(false)
+  // Waypoint drag state - SIMPLE approach
+  const [dragState, setDragState] = useState<{
+    waypointIndex: number
+    startX: number
+    startY: number
+  } | null>(null)
+
+  // Handle waypoint drag start - SIMPLIFIED
+  const handleWaypointPointerDown = useCallback((e: React.PointerEvent, index: number) => {
+    if (!isEditable) return
+    
+    e.stopPropagation()
+    e.preventDefault()
+    
+    setDragState({
+      waypointIndex: index,
+      startX: e.clientX,
+      startY: e.clientY
+    })
+    
+    setDraggingWaypoint(index)
+  }, [isEditable])
   
-  useEffect(() => {
-    // Detect touch capability
-    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0)
-  }, [])
+  // Handle waypoint drag move - SIMPLIFIED
+  const handleWaypointPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragState || !data?.onWaypointDrag) return
+    
+    e.stopPropagation()
+    e.preventDefault()
+    
+    // Update position in real-time (no save to DB yet)
+    data.onWaypointDrag(dragState.waypointIndex, e.clientX, e.clientY, false)
+  }, [dragState, data])
   
-  // Click outside handler to deselect waypoint on mobile
-  useEffect(() => {
-    if (!isTouchDevice || selectedWaypoint === null) return
+  // Handle waypoint drag end - SIMPLIFIED
+  const handleWaypointPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!dragState || !data?.onWaypointDrag) return
     
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      // Check if click is outside waypoint area
-      const target = e.target as HTMLElement
-      if (!target.closest('.waypoint-container')) {
-        setSelectedWaypoint(null)
-      }
+    e.stopPropagation()
+    e.preventDefault()
+    
+    // Save final position to DB
+    data.onWaypointDrag(dragState.waypointIndex, e.clientX, e.clientY, true)
+    
+    setDragState(null)
+    setDraggingWaypoint(null)
+  }, [dragState, data])
+  
+  // Handle waypoint delete - SIMPLIFIED
+  const handleWaypointDelete = useCallback((e: React.MouseEvent, index: number) => {
+    e.stopPropagation()
+    e.preventDefault()
+    
+    if (!isEditable || !data?.onRemoveWaypoint) return
+    
+    const confirmed = window.confirm('Hapus waypoint ini?')
+    if (confirmed) {
+      data.onRemoveWaypoint(index)
     }
+  }, [isEditable, data])
+  
+  // Handle add waypoint on path click - SIMPLIFIED
+  const handlePathClick = useCallback((e: React.PointerEvent<SVGPathElement>) => {
+    if (!isEditable || !data?.onAddWaypoint) return
     
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('touchstart', handleClickOutside)
+    e.stopPropagation()
+    e.preventDefault()
     
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('touchstart', handleClickOutside)
-    }
-  }, [isTouchDevice, selectedWaypoint])
+    const svg = (e.target as SVGElement).ownerSVGElement
+    if (!svg) return
+    
+    const point = svg.createSVGPoint()
+    point.x = e.clientX
+    point.y = e.clientY
+    
+    const svgPoint = point.matrixTransform(svg.getScreenCTM()?.inverse())
+    data.onAddWaypoint(svgPoint.x, svgPoint.y)
+  }, [isEditable, data])
   
   // Build smooth Bezier curve path through waypoints using utility
   const edgePath = useMemo(() => {
@@ -97,125 +146,6 @@ export default function ConnectionEdge({
   const strokeDasharray = data?.type === 'WIRELESS' ? '8 4' : 
                           data?.type === 'FIBER_OPTIC' ? '2 2' : 
                           undefined
-
-  // Handle pointer down on path to add waypoint (unified mouse/touch)
-  const handlePathPointerDown = useCallback((e: React.PointerEvent<SVGPathElement>) => {
-    if (!isEditable || !data?.onAddWaypoint) return
-    
-    // CRITICAL: Stop propagation to prevent conflicts
-    e.stopPropagation()
-    e.preventDefault()
-    
-    const svg = (e.target as SVGElement).ownerSVGElement
-    if (!svg) return
-    
-    // Get exact click position in SVG coordinates
-    const point = svg.createSVGPoint()
-    point.x = e.clientX
-    point.y = e.clientY
-    
-    const svgPoint = point.matrixTransform(svg.getScreenCTM()?.inverse())
-    
-    // Add waypoint at exact click position
-    data.onAddWaypoint(svgPoint.x, svgPoint.y)
-  }, [isEditable, data])
-
-  // Handle waypoint drag using Pointer Events API (unified mouse/touch)
-  const handleWaypointDragStart = useCallback((e: React.PointerEvent, index: number) => {
-    if (!isEditable) return
-    
-    e.stopPropagation()
-    e.preventDefault()
-    
-    setDraggingWaypoint(index)
-    
-    if (isTouchDevice) {
-      setSelectedWaypoint(index)
-    }
-    
-    const target = e.currentTarget as HTMLElement
-    target.setPointerCapture(e.pointerId)
-    
-    // CRITICAL FIX: Store last valid position to avoid (0,0) bug on pointerup
-    let lastValidX = e.clientX
-    let lastValidY = e.clientY
-    
-    const handleMove = (moveEvent: PointerEvent) => {
-      if (!data?.onWaypointDrag) return
-      
-      // Only update if coordinates are valid (not 0,0)
-      if (moveEvent.clientX !== 0 || moveEvent.clientY !== 0) {
-        lastValidX = moveEvent.clientX
-        lastValidY = moveEvent.clientY
-        data.onWaypointDrag(index, moveEvent.clientX, moveEvent.clientY, false)
-      }
-    }
-    
-    const handleEnd = (endEvent: PointerEvent) => {
-      if (!data?.onWaypointDrag) return
-      
-      // CRITICAL FIX: Use last valid position if pointerup gives (0,0)
-      const finalX = (endEvent.clientX === 0 && endEvent.clientY === 0) ? lastValidX : endEvent.clientX
-      const finalY = (endEvent.clientX === 0 && endEvent.clientY === 0) ? lastValidY : endEvent.clientY
-      
-      data.onWaypointDrag(index, finalX, finalY, true)
-      
-      setDraggingWaypoint(null)
-      target.releasePointerCapture(endEvent.pointerId)
-      
-      document.removeEventListener('pointermove', handleMove)
-      document.removeEventListener('pointerup', handleEnd)
-      document.removeEventListener('pointercancel', handleEnd)
-    }
-    
-    document.addEventListener('pointermove', handleMove)
-    document.addEventListener('pointerup', handleEnd)
-    document.addEventListener('pointercancel', handleEnd)
-  }, [isEditable, isTouchDevice, data])
-  
-  // Handle waypoint click/tap to toggle selected state (mobile)
-  const handleWaypointClick = useCallback((e: React.PointerEvent, index: number) => {
-    if (!isEditable || !isTouchDevice) return
-    
-    // Stop propagation
-    e.stopPropagation()
-    e.preventDefault()
-    
-    // Toggle selected state
-    setSelectedWaypoint(prev => prev === index ? null : index)
-  }, [isEditable, isTouchDevice])
-
-  // Handle waypoint removal via delete button - with native confirmation
-  const handleDeleteClick = useCallback((e: React.MouseEvent, index: number) => {
-    e.stopPropagation()
-    e.preventDefault()
-    
-    if (!isEditable || !data?.onRemoveWaypoint) return
-    
-    const confirmed = window.confirm(
-      'Apakah Anda yakin ingin menghapus waypoint ini?\n\nTindakan ini tidak dapat dibatalkan.'
-    )
-    
-    if (confirmed) {
-      setHoveredWaypoint(null)
-      setSelectedWaypoint(null)
-      setDraggingWaypoint(null)
-      data.onRemoveWaypoint(index)
-    }
-  }, [isEditable, data])
-  
-  // Handle group hover (desktop only)
-  const handleGroupEnter = useCallback((index: number) => {
-    if (!isTouchDevice && !draggingWaypoint) {
-      setHoveredWaypoint(index)
-    }
-  }, [isTouchDevice, draggingWaypoint])
-  
-  const handleGroupLeave = useCallback(() => {
-    if (!isTouchDevice && !draggingWaypoint) {
-      setHoveredWaypoint(null)
-    }
-  }, [isTouchDevice, draggingWaypoint])
 
   return (
     <>
@@ -245,7 +175,7 @@ export default function ConnectionEdge({
         }}
       />
       
-      {/* Wide invisible path for easier clicking - using Pointer Events */}
+      {/* Wide invisible path for easier clicking */}
       {isEditable && (
         <path
           d={edgePath}
@@ -253,7 +183,7 @@ export default function ConnectionEdge({
           stroke="transparent"
           fill="none"
           className="cursor-pointer"
-          onPointerDown={handlePathPointerDown}
+          onPointerDown={handlePathClick}
           style={{ pointerEvents: 'stroke' }}
         />
       )}
@@ -308,10 +238,13 @@ export default function ConnectionEdge({
         </>
       )}
       
-      {/* Waypoint markers - ONLY visible in edit mode - READ ONLY (no drag) */}
+      {/* Waypoint markers - SIMPLE drag implementation */}
       {isEditable && (
         <EdgeLabelRenderer>
           {waypoints.map((waypoint, index) => {
+            const isDragging = draggingWaypoint === index
+            const isHovered = hoveredWaypoint === index
+            
             return (
               <div
                 key={`waypoint-${index}`}
@@ -319,27 +252,66 @@ export default function ConnectionEdge({
                 style={{
                   position: 'absolute',
                   transform: `translate(-50%, -50%) translate(${waypoint.x}px, ${waypoint.y}px)`,
-                  pointerEvents: 'none',
+                  pointerEvents: 'all', // ENABLE pointer events
                   zIndex: 9999,
                 }}
+                onPointerMove={handleWaypointPointerMove}
+                onPointerUp={handleWaypointPointerUp}
               >
-                {/* Waypoint dot - SMALL and SUBTLE - NO INTERACTION */}
-                <div
-                  className="
-                    w-2 h-2 rounded-full
-                    bg-blue-500/60 backdrop-blur-sm
-                    border border-blue-600
-                    shadow-sm
-                  "
-                  title={`Waypoint ${index + 1}`}
+                <div 
+                  className="relative"
+                  onMouseEnter={() => setHoveredWaypoint(index)}
+                  onMouseLeave={() => setHoveredWaypoint(null)}
+                  style={{
+                    padding: '12px',
+                    margin: '-12px',
+                  }}
                 >
-                  {/* Inner glow */}
-                  <div 
-                    className="absolute inset-0 rounded-full"
-                    style={{
-                      background: `radial-gradient(circle, ${sourceColor}20 0%, transparent 70%)`,
-                    }}
-                  />
+                  {/* Waypoint dot - DRAGGABLE */}
+                  <div
+                    className={`
+                      relative rounded-full
+                      bg-blue-500/70 backdrop-blur-sm
+                      border-2 border-blue-600
+                      shadow-md
+                      transition-all duration-150
+                      cursor-move
+                      ${isDragging ? 'w-4 h-4 scale-125 shadow-xl' : 
+                        isHovered ? 'w-3 h-3 scale-110 shadow-lg' : 
+                        'w-2.5 h-2.5'}
+                    `}
+                    onPointerDown={(e) => handleWaypointPointerDown(e, index)}
+                    title="Drag untuk geser waypoint"
+                  >
+                    {/* Inner glow */}
+                    <div 
+                      className="absolute inset-0 rounded-full"
+                      style={{
+                        background: `radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, transparent 70%)`,
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Delete button - show on hover */}
+                  {isHovered && !isDragging && (
+                    <button
+                      className="
+                        absolute -top-1 -right-1
+                        w-4 h-4
+                        flex items-center justify-center
+                        bg-red-500 hover:bg-red-600
+                        rounded-full
+                        shadow-md
+                        transition-colors
+                      "
+                      onClick={(e) => handleWaypointDelete(e, index)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      aria-label="Hapus waypoint"
+                      title="Hapus waypoint"
+                    >
+                      <X className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                    </button>
+                  )}
                 </div>
               </div>
             )
