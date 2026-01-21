@@ -37,7 +37,6 @@ export default function ConnectionEdge({
   const [hoveredWaypoint, setHoveredWaypoint] = useState<number | null>(null)
   const [selectedWaypoint, setSelectedWaypoint] = useState<number | null>(null)
   const [draggingWaypoint, setDraggingWaypoint] = useState<number | null>(null)
-  const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null)
   
   const waypoints = data?.waypoints || []
   const isEditable = data?.isEditable || false
@@ -187,38 +186,30 @@ export default function ConnectionEdge({
     setSelectedWaypoint(prev => prev === index ? null : index)
   }, [isEditable, isTouchDevice])
 
-  // Handle waypoint removal via delete button - show confirmation first
-  const handleDeleteClick = useCallback((e: React.MouseEvent | React.PointerEvent, index: number) => {
+  // Handle waypoint removal via delete button - with native confirmation
+  const handleDeleteClick = useCallback((e: React.MouseEvent, index: number) => {
     // CRITICAL: Stop propagation immediately
     e.stopPropagation()
     e.preventDefault()
     
-    if (!isEditable) return
+    if (!isEditable || !data?.onRemoveWaypoint) return
     
-    // Show confirmation dialog
-    setConfirmDeleteIndex(index)
-  }, [isEditable])
-  
-  // Confirm delete waypoint
-  const confirmDelete = useCallback(() => {
-    if (confirmDeleteIndex === null || !data?.onRemoveWaypoint) return
+    // Show native browser confirmation dialog
+    const confirmed = window.confirm(
+      'Apakah Anda yakin ingin menghapus waypoint ini?\n\nTindakan ini tidak dapat dibatalkan.'
+    )
     
-    // Clear states first
-    setHoveredWaypoint(null)
-    setSelectedWaypoint(null)
-    setDraggingWaypoint(null)
-    
-    // Remove the waypoint
-    data.onRemoveWaypoint(confirmDeleteIndex)
-    
-    // Close confirmation dialog
-    setConfirmDeleteIndex(null)
-  }, [confirmDeleteIndex, data])
-  
-  // Cancel delete
-  const cancelDelete = useCallback(() => {
-    setConfirmDeleteIndex(null)
-  }, [])
+    if (confirmed) {
+      // Clear states first
+      setHoveredWaypoint(null)
+      setSelectedWaypoint(null)
+      setDraggingWaypoint(null)
+      
+      // Remove the waypoint immediately
+      console.log('Deleting waypoint at index:', index)
+      data.onRemoveWaypoint(index)
+    }
+  }, [isEditable, data])
   
   // Handle group hover (desktop only)
   const handleGroupEnter = useCallback((index: number) => {
@@ -389,70 +380,6 @@ export default function ConnectionEdge({
           >
             <div className="px-2 py-1 bg-white border border-gray-300 rounded shadow-sm text-xs text-gray-700">
               {data.label}
-            </div>
-          </div>
-        </EdgeLabelRenderer>
-      )}
-      
-      {/* Confirmation Dialog for Delete Waypoint */}
-      {confirmDeleteIndex !== null && (
-        <EdgeLabelRenderer>
-          <div
-            className="nodrag nopan"
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 99999,
-              pointerEvents: 'all',
-            }}
-          >
-            {/* Overlay */}
-            <div 
-              className="absolute inset-0 bg-black bg-opacity-50"
-              onClick={cancelDelete}
-            />
-            
-            {/* Confirmation Dialog */}
-            <div 
-              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full mx-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Hapus Waypoint?
-              </h3>
-              <p className="text-sm text-gray-600 mb-6">
-                Apakah Anda yakin ingin menghapus waypoint ini? Tindakan ini tidak dapat dibatalkan.
-              </p>
-              
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={cancelDelete}
-                  className="
-                    px-4 py-2
-                    bg-gray-200 hover:bg-gray-300
-                    text-gray-700 rounded-lg font-medium
-                    transition-colors duration-200
-                  "
-                  type="button"
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="
-                    px-4 py-2
-                    bg-red-600 hover:bg-red-700
-                    text-white rounded-lg font-medium
-                    transition-colors duration-200
-                  "
-                  type="button"
-                >
-                  Hapus
-                </button>
-              </div>
             </div>
           </div>
         </EdgeLabelRenderer>
