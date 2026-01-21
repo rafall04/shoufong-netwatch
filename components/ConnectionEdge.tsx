@@ -127,11 +127,6 @@ export default function ConnectionEdge({
     e.stopPropagation()
     e.preventDefault()
     
-    console.log('=== DRAG START DEBUG ===')
-    console.log('1. Pointer type:', e.pointerType)
-    console.log('2. Start clientX:', e.clientX, 'clientY:', e.clientY)
-    console.log('3. Is touch device:', isTouchDevice)
-    
     setDraggingWaypoint(index)
     
     if (isTouchDevice) {
@@ -141,27 +136,29 @@ export default function ConnectionEdge({
     const target = e.currentTarget as HTMLElement
     target.setPointerCapture(e.pointerId)
     
-    let moveCount = 0
+    // CRITICAL FIX: Store last valid position to avoid (0,0) bug on pointerup
+    let lastValidX = e.clientX
+    let lastValidY = e.clientY
     
     const handleMove = (moveEvent: PointerEvent) => {
       if (!data?.onWaypointDrag) return
       
-      moveCount++
-      if (moveCount === 1 || moveCount % 10 === 0) {
-        console.log(`Move ${moveCount}: clientX=${moveEvent.clientX}, clientY=${moveEvent.clientY}`)
+      // Only update if coordinates are valid (not 0,0)
+      if (moveEvent.clientX !== 0 || moveEvent.clientY !== 0) {
+        lastValidX = moveEvent.clientX
+        lastValidY = moveEvent.clientY
+        data.onWaypointDrag(index, moveEvent.clientX, moveEvent.clientY, false)
       }
-      
-      data.onWaypointDrag(index, moveEvent.clientX, moveEvent.clientY, false)
     }
     
     const handleEnd = (endEvent: PointerEvent) => {
       if (!data?.onWaypointDrag) return
       
-      console.log('=== DRAG END DEBUG ===')
-      console.log('End clientX:', endEvent.clientX, 'clientY:', endEvent.clientY)
-      console.log('Total moves:', moveCount)
+      // CRITICAL FIX: Use last valid position if pointerup gives (0,0)
+      const finalX = (endEvent.clientX === 0 && endEvent.clientY === 0) ? lastValidX : endEvent.clientX
+      const finalY = (endEvent.clientX === 0 && endEvent.clientY === 0) ? lastValidY : endEvent.clientY
       
-      data.onWaypointDrag(index, endEvent.clientX, endEvent.clientY, true)
+      data.onWaypointDrag(index, finalX, finalY, true)
       
       setDraggingWaypoint(null)
       target.releasePointerCapture(endEvent.pointerId)

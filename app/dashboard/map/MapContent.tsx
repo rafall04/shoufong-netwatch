@@ -440,7 +440,6 @@ function MapContentInner() {
   }, [mutateConnections])
   
   // Handle waypoint drag - OPTIMIZED: Update local state immediately, save to DB on drag end
-  // Handle waypoint drag - OPTIMIZED: Update local state immediately, save to DB on drag end
   const handleWaypointDrag = useCallback((
     connectionId: string,
     waypointIndex: number,
@@ -458,13 +457,6 @@ function MapContentInner() {
       x: screenX,
       y: screenY
     })
-    
-    if (isDragEnd) {
-      console.log('=== HANDLE WAYPOINT DRAG DEBUG ===')
-      console.log('Screen coords:', screenX, screenY)
-      console.log('Flow coords:', position.x, position.y)
-      console.log('ReactFlow viewport:', reactFlowInstance.getViewport())
-    }
     
     const waypoints = connection.waypoints ? JSON.parse(connection.waypoints) : []
     
