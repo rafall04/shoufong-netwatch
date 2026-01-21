@@ -131,6 +131,7 @@ function MapContentInner() {
   const [drawingSourceId, setDrawingSourceId] = useState<string | null>(null)
   const [drawingWaypoints, setDrawingWaypoints] = useState<Array<{ x: number; y: number }>>([])
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null)
+  const [justStartedDrawing, setJustStartedDrawing] = useState(false) // Flag to prevent immediate waypoint
   const mapContainerRef = useRef<HTMLDivElement>(null)
   
   const { data, error, mutate } = useSWR<{ devices: Device[] }>('/api/devices', fetcher, {
@@ -207,6 +208,12 @@ function MapContentInner() {
     setDrawingSourceId(sourceId)
     setDrawingWaypoints([])
     setMousePosition(null)
+    setJustStartedDrawing(true) // Set flag to prevent immediate waypoint
+    
+    // Clear flag after a short delay to allow next clicks to add waypoints
+    setTimeout(() => {
+      setJustStartedDrawing(false)
+    }, 100)
   }, [session])
   
   // Track mouse position for preview line
@@ -225,6 +232,12 @@ function MapContentInner() {
   const handleCanvasClick = useCallback((event: React.MouseEvent | MouseEvent) => {
     if (!isDrawingMode || !reactFlowInstance) return
     
+    // CRITICAL FIX: Prevent adding waypoint immediately after starting drawing mode
+    if (justStartedDrawing) {
+      console.log('⏭️ Skipping waypoint - just started drawing')
+      return
+    }
+    
     // CRITICAL: Add waypoint at click position
     // This MUST NOT terminate the connection
     // Drawing state remains TRUE
@@ -239,7 +252,7 @@ function MapContentInner() {
     
     // IMPORTANT: Do NOT call cancelDrawing() or finalizeConnection() here
     // Connection only finalizes when clicking a target node
-  }, [isDrawingMode, reactFlowInstance, drawingWaypoints.length])
+  }, [isDrawingMode, reactFlowInstance, drawingWaypoints.length, justStartedDrawing])
   
   // Cancel drawing mode
   const cancelDrawing = useCallback(() => {
@@ -249,6 +262,7 @@ function MapContentInner() {
     setDrawingSourceId(null)
     setDrawingWaypoints([])
     setMousePosition(null)
+    setJustStartedDrawing(false) // Reset flag
   }, [])
   
   // Finalize connection with target node
