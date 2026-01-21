@@ -308,7 +308,11 @@ function MapContentInner() {
       }
       
       console.log('6. Calling mutateConnections to refresh data...')
-      mutateConnections()
+      // Force revalidate to fetch fresh data from server
+      await mutateConnections(undefined, { revalidate: true })
+      console.log('7. Waiting for data to refresh...')
+      // Small delay to ensure data is refreshed
+      await new Promise(resolve => setTimeout(resolve, 100))
       console.log('✅ UPDATE SUCCESS: Connection updated and data refreshed')
     } catch (error: any) {
       console.error('❌ UPDATE ERROR:', error)
