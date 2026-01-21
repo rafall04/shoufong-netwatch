@@ -748,6 +748,18 @@ function MapContentInner() {
       try {
         if (node.id.startsWith('layout-')) {
           const layoutId = node.id.replace('layout-', '')
+          
+          // Optimistic update for layout
+          if (layoutData?.elements) {
+            const updatedElements = layoutData.elements.map(el => 
+              el.id === layoutId 
+                ? { ...el, positionX: node.position.x, positionY: node.position.y }
+                : el
+            )
+            mutateLayout({ elements: updatedElements }, false)
+          }
+          
+          // Save to database
           await fetch('/api/layout/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -759,7 +771,21 @@ function MapContentInner() {
               height: node.style?.height || 100,
             }),
           })
+          
+          // Revalidate to ensure consistency
+          mutateLayout()
         } else {
+          // Optimistic update for device
+          if (data?.devices) {
+            const updatedDevices = data.devices.map(device => 
+              device.id === node.id 
+                ? { ...device, positionX: node.position.x, positionY: node.position.y }
+                : device
+            )
+            mutate({ devices: updatedDevices }, false)
+          }
+          
+          // Save to database
           await fetch('/api/device/move', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -769,12 +795,18 @@ function MapContentInner() {
               positionY: node.position.y,
             }),
           })
+          
+          // Revalidate to ensure consistency
+          mutate()
         }
       } catch (error) {
         console.error('Error updating position:', error)
+        // Revert optimistic update on error
+        mutate()
+        mutateLayout()
       }
     },
-    [session]
+    [session, data, layoutData, mutate, mutateLayout]
   )
   
   // Transform data to nodes and edges
