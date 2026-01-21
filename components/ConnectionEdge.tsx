@@ -5,6 +5,7 @@ import {
   EdgeProps, 
   EdgeLabelRenderer,
 } from 'reactflow'
+import { X } from 'lucide-react'
 
 interface Waypoint {
   x: number
@@ -72,10 +73,11 @@ export default function ConnectionEdge({
                           data?.type === 'FIBER_OPTIC' ? '2 2' : 
                           undefined
 
-  // Handle click on path to add waypoint
-  const handlePathClick = useCallback((e: React.MouseEvent<SVGPathElement>) => {
+  // Handle pointer down on path to add waypoint (unified mouse/touch)
+  const handlePathPointerDown = useCallback((e: React.PointerEvent<SVGPathElement>) => {
     if (!isEditable || !data?.onAddWaypoint) return
     
+    // CRITICAL: Stop propagation to prevent conflicts
     e.stopPropagation()
     e.preventDefault()
     
@@ -93,57 +95,65 @@ export default function ConnectionEdge({
     data.onAddWaypoint(svgPoint.x, svgPoint.y)
   }, [isEditable, data])
 
-  // Handle waypoint drag
-  const handleWaypointDragStart = useCallback((e: React.MouseEvent | React.TouchEvent, index: number) => {
+  // Handle waypoint drag using Pointer Events API (unified mouse/touch)
+  const handleWaypointDragStart = useCallback((e: React.PointerEvent, index: number) => {
     if (!isEditable) return
     
+    // CRITICAL: Stop propagation to prevent triggering path click
     e.stopPropagation()
+    e.preventDefault()
+    
     setDraggingWaypoint(index)
     
-    const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
+    // Capture pointer for smooth dragging
+    const target = e.currentTarget as HTMLElement
+    target.setPointerCapture(e.pointerId)
+    
+    const handleMove = (moveEvent: PointerEvent) => {
       if (!data?.onWaypointDrag) return
       
-      const clientX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX
-      const clientY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY
-      
-      // Update position in real-time
-      data.onWaypointDrag(index, clientX, clientY, false)
+      // Update position in real-time using pointer coordinates
+      data.onWaypointDrag(index, moveEvent.clientX, moveEvent.clientY, false)
     }
     
-    const handleEnd = (endEvent: MouseEvent | TouchEvent) => {
+    const handleEnd = (endEvent: PointerEvent) => {
       if (!data?.onWaypointDrag) return
       
-      const clientX = 'changedTouches' in endEvent ? endEvent.changedTouches[0].clientX : endEvent.clientX
-      const clientY = 'changedTouches' in endEvent ? endEvent.changedTouches[0].clientY : endEvent.clientY
-      
       // Save to database on drag end
-      data.onWaypointDrag(index, clientX, clientY, true)
+      data.onWaypointDrag(index, endEvent.clientX, endEvent.clientY, true)
       
       setDraggingWaypoint(null)
       setHoveredWaypoint(null)
       
-      document.removeEventListener('mousemove', handleMove as any)
-      document.removeEventListener('mouseup', handleEnd as any)
-      document.removeEventListener('touchmove', handleMove as any)
-      document.removeEventListener('touchend', handleEnd as any)
+      // Release pointer capture
+      target.releasePointerCapture(endEvent.pointerId)
+      
+      // Clean up listeners
+      document.removeEventListener('pointermove', handleMove)
+      document.removeEventListener('pointerup', handleEnd)
+      document.removeEventListener('pointercancel', handleEnd)
     }
     
-    document.addEventListener('mousemove', handleMove as any)
-    document.addEventListener('mouseup', handleEnd as any)
-    document.addEventListener('touchmove', handleMove as any)
-    document.addEventListener('touchend', handleEnd as any)
+    // Use Pointer Events for unified mouse/touch handling
+    document.addEventListener('pointermove', handleMove)
+    document.addEventListener('pointerup', handleEnd)
+    document.addEventListener('pointercancel', handleEnd)
   }, [isEditable, data])
 
-  // Handle waypoint removal on double-click
-  const handleRemoveWaypoint = useCallback((e: React.MouseEvent, index: number) => {
+  // Handle waypoint removal via delete button (CRITICAL: Must stop all propagation)
+  const handleRemoveWaypoint = useCallback((e: React.PointerEvent, index: number) => {
     if (!isEditable || !data?.onRemoveWaypoint) return
     
-    // CRITICAL: Stop all event propagation to prevent triggering add waypoint
+    // CRITICAL: Stop ALL event propagation to prevent Ghost Click Bug
+    // This prevents the click from bubbling to the line underneath
     e.stopPropagation()
     e.preventDefault()
-    e.nativeEvent.stopImmediatePropagation()
     
+    // Remove the waypoint
     data.onRemoveWaypoint(index)
+    
+    // Clear hover state
+    setHoveredWaypoint(null)
   }, [isEditable, data])
 
   return (
@@ -163,7 +173,7 @@ export default function ConnectionEdge({
         }}
       />
       
-      {/* Wide invisible path for easier clicking */}
+      {/* Wide invisible path for easier clicking - using Pointer Events */}
       {isEditable && (
         <path
           d={edgePath}
@@ -171,7 +181,7 @@ export default function ConnectionEdge({
           stroke="transparent"
           fill="none"
           className="cursor-pointer"
-          onClick={handlePathClick}
+          onPointerDown={handlePathPointerDown}
           style={{ pointerEvents: 'stroke' }}
         />
       )}
@@ -190,7 +200,7 @@ export default function ConnectionEdge({
         />
       )}
       
-      {/* Waypoint markers - clean visual only, no labels */}
+      {/* Waypoint markers with delete button */}
       <EdgeLabelRenderer>
         {waypoints.map((waypoint, index) => {
           const isDragging = draggingWaypoint === index
@@ -204,52 +214,100 @@ export default function ConnectionEdge({
                 position: 'absolute',
                 transform: `translate(-50%, -50%) translate(${waypoint.x}px, ${waypoint.y}px)`,
                 pointerEvents: 'all',
-                zIndex: isDragging ? 1000 : 10,
+                // CRITICAL: High z-index to ensure delete button is above line
+                zIndex: isDragging ? 1000 : isHovered ? 100 : 50,
               }}
             >
-              {/* Waypoint marker - simple draggable circle */}
-              <div
-                className={`
-                  relative
-                  ${isEditable ? 'cursor-move' : 'cursor-default'}
-                  ${isDragging ? 'scale-125' : isHovered ? 'scale-110' : 'scale-100'}
-                  transition-transform duration-150
-                `}
-                onMouseDown={(e) => handleWaypointDragStart(e, index)}
-                onTouchStart={(e) => handleWaypointDragStart(e, index)}
-                onMouseEnter={() => !isDragging && setHoveredWaypoint(index)}
-                onMouseLeave={() => !isDragging && setHoveredWaypoint(null)}
-                onClick={(e) => {
-                  // CRITICAL: Prevent single click from bubbling to path (which would add waypoint)
-                  e.stopPropagation()
-                  e.preventDefault()
-                  e.nativeEvent.stopImmediatePropagation()
-                }}
-                onDoubleClick={(e) => {
-                  // CRITICAL: Double-click to delete waypoint
-                  // Must stop ALL propagation to prevent triggering add waypoint on line
-                  e.stopPropagation()
-                  e.preventDefault()
-                  e.nativeEvent.stopImmediatePropagation()
-                  
-                  if (isEditable && data?.onRemoveWaypoint) {
-                    data.onRemoveWaypoint(index)
-                  }
-                }}
-                title={isEditable ? "Double-click to remove waypoint" : "Waypoint"}
-              >
-                {/* Simple circle marker */}
+              {/* Waypoint container */}
+              <div className="relative">
+                {/* Draggable waypoint circle */}
                 <div
                   className={`
-                    w-3 h-3 rounded-full border-2 bg-white
-                    transition-all duration-200
-                    shadow-md
-                    ${isHovered || isDragging ? 'border-blue-500 shadow-lg' : 'border-gray-400'}
+                    ${isEditable ? 'cursor-move' : 'cursor-default'}
+                    ${isDragging ? 'scale-125' : isHovered ? 'scale-110' : 'scale-100'}
+                    transition-transform duration-150
                   `}
-                  style={{
-                    borderColor: isHovered || isDragging ? '#3b82f6' : strokeColor,
-                  }}
-                />
+                  onPointerDown={(e) => handleWaypointDragStart(e, index)}
+                  onPointerEnter={() => !isDragging && setHoveredWaypoint(index)}
+                  onPointerLeave={() => !isDragging && setHoveredWaypoint(null)}
+                  title={isEditable ? "Drag to move, click X to delete" : "Waypoint"}
+                >
+                  {/* Circle marker */}
+                  <div
+                    className={`
+                      w-3 h-3 rounded-full border-2 bg-white
+                      transition-all duration-200
+                      shadow-md
+                      ${isHovered || isDragging ? 'border-blue-500 shadow-lg' : 'border-gray-400'}
+                    `}
+                    style={{
+                      borderColor: isHovered || isDragging ? '#3b82f6' : strokeColor,
+                    }}
+                  />
+                </div>
+                
+                {/* Delete button - visible on hover (mobile: always visible) */}
+                {isEditable && (isHovered || isDragging) && (
+                  <div
+                    className="absolute -top-5 -right-5"
+                    style={{
+                      // CRITICAL: Highest z-index to be above everything
+                      zIndex: 1001,
+                    }}
+                  >
+                    {/* Invisible hit area for mobile (44x44px minimum) */}
+                    <button
+                      className="
+                        relative
+                        w-11 h-11 md:w-8 md:h-8
+                        flex items-center justify-center
+                        cursor-pointer
+                        group
+                      "
+                      onPointerDown={(e) => {
+                        // CRITICAL: Stop ALL propagation to prevent Ghost Click Bug
+                        e.stopPropagation()
+                        e.preventDefault()
+                        
+                        // Call delete handler
+                        handleRemoveWaypoint(e, index)
+                      }}
+                      onClick={(e) => {
+                        // CRITICAL: Additional safety - stop propagation on click too
+                        e.stopPropagation()
+                        e.preventDefault()
+                      }}
+                      aria-label="Delete waypoint"
+                      title="Delete waypoint"
+                      type="button"
+                    >
+                      {/* Visible X button (centered in hit area) */}
+                      <div
+                        className="
+                          absolute inset-0
+                          flex items-center justify-center
+                        "
+                      >
+                        <div
+                          className="
+                            w-5 h-5
+                            flex items-center justify-center
+                            bg-red-500 hover:bg-red-600
+                            rounded-full
+                            shadow-lg
+                            transition-all duration-200
+                            group-hover:scale-110
+                          "
+                        >
+                          <X className="w-3 h-3 text-white" strokeWidth={3} />
+                        </div>
+                      </div>
+                      
+                      {/* Debug: Show hit area in development (remove in production) */}
+                      {/* <div className="absolute inset-0 border border-red-300 opacity-20" /> */}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )
