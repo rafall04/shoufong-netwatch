@@ -126,6 +126,13 @@ function MapContentInner() {
   const [editMode, setEditMode] = useState(false)
   const reactFlowInstance = useReactFlow()
   
+  // Manual Cable Drawing State
+  const [isDrawingMode, setIsDrawingMode] = useState(false)
+  const [drawingSourceId, setDrawingSourceId] = useState<string | null>(null)
+  const [drawingWaypoints, setDrawingWaypoints] = useState<Array<{ x: number; y: number }>>([])
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null)
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  
   const { data, error, mutate } = useSWR<{ devices: Device[] }>('/api/devices', fetcher, {
     refreshInterval: 20000, // Auto refresh every 20 seconds
     revalidateOnFocus: true,
@@ -187,6 +194,122 @@ function MapContentInner() {
       alert('Error syncing with MikroTik')
     }
   }, [mutate])
+  
+  // Manual Cable Drawing Handlers
+  
+  // Start drawing mode when clicking a source node
+  const startDrawingConnection = useCallback((sourceId: string) => {
+    if (session?.user?.role === 'VIEWER') return
+    
+    setIsDrawingMode(true)
+    setDrawingSourceId(sourceId)
+    setDrawingWaypoints([])
+    setMousePosition(null)
+  }, [session])
+  
+  // Track mouse position for preview line
+  const handleMouseMove = useCallback((event: React.MouseEvent) => {
+    if (!isDrawingMode || !reactFlowInstance) return
+    
+    const position = reactFlowInstance.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY
+    })
+    
+    setMousePosition(position)
+  }, [isDrawingMode, reactFlowInstance])
+  
+  // Handle canvas click - add waypoint or finalize connection
+  const handleCanvasClick = useCallback((event: React.MouseEvent) => {
+    if (!isDrawingMode || !reactFlowInstance) return
+    
+    // Check if clicked on a node (target)
+    const target = event.target as HTMLElement
+    
+    // Check if clicked on ReactFlow pane (background)
+    const isPane = target.classList.contains('react-flow__pane')
+    
+    if (!isPane) {
+      // Clicked on something else (node, edge, etc) - ignore
+      return
+    }
+    
+    // Add waypoint at click position
+    const position = reactFlowInstance.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY
+    })
+    
+    setDrawingWaypoints(prev => [...prev, position])
+  }, [isDrawingMode, reactFlowInstance])
+  
+  // Cancel drawing mode
+  const cancelDrawing = useCallback(() => {
+    setIsDrawingMode(false)
+    setDrawingSourceId(null)
+    setDrawingWaypoints([])
+    setMousePosition(null)
+  }, [])
+  
+  // Finalize connection with target node
+  const finalizeConnection = useCallback(async (targetId: string) => {
+    if (!drawingSourceId) return
+    
+    try {
+      // Create connection with waypoints
+      const response = await fetch('/api/connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceId: drawingSourceId,
+          targetId: targetId,
+          type: 'LAN',
+          animated: true,
+          waypoints: drawingWaypoints.length > 0 ? drawingWaypoints : null
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create connection')
+      }
+      
+      // Refresh connections
+      await mutateConnections()
+      
+      // Reset drawing state
+      cancelDrawing()
+    } catch (error: any) {
+      console.error('Error creating connection:', error)
+      alert(error.message || 'Failed to create connection')
+    }
+  }, [drawingSourceId, drawingWaypoints, mutateConnections, cancelDrawing])
+  
+  // Handle ESC key to cancel drawing
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isDrawingMode) {
+        cancelDrawing()
+      }
+    }
+    
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isDrawingMode, cancelDrawing])
+  
+  // Handle right-click to cancel drawing
+  useEffect(() => {
+    const handleContextMenu = (event: MouseEvent) => {
+      if (isDrawingMode) {
+        event.preventDefault()
+        cancelDrawing()
+      }
+    }
+    
+    document.addEventListener('contextmenu', handleContextMenu)
+    return () => document.removeEventListener('contextmenu', handleContextMenu)
+  }, [isDrawingMode, cancelDrawing])
   
   // Fullscreen toggle
   const toggleFullscreen = useCallback(() => {
@@ -690,26 +813,34 @@ function MapContentInner() {
             ip: device.ip,
             lastSeen: device.lastSeen,
             statusSince: device.statusSince,
+            isDrawingMode: isDrawingMode,
+            isDrawingSource: isDrawingMode && drawingSourceId === device.id,
+            onStartDrawing: () => startDrawingConnection(device.id),
+            onFinalizeDrawing: () => finalizeConnection(device.id),
             onClick: (e?: React.MouseEvent) => {
-              setSelectedDevice(device)
-              if (e) {
-                setDevicePopupPosition({ x: e.clientX, y: e.clientY })
+              if (!isDrawingMode) {
+                setSelectedDevice(device)
+                if (e) {
+                  setDevicePopupPosition({ x: e.clientX, y: e.clientY })
+                }
               }
             },
             onContextMenu: (e: React.MouseEvent) => {
-              setContextMenu({
-                x: e.clientX,
-                y: e.clientY,
-                device: device
-              })
+              if (!isDrawingMode) {
+                setContextMenu({
+                  x: e.clientX,
+                  y: e.clientY,
+                  device: device
+                })
+              }
             },
           },
           style: {
             width: 96, // Fixed width for proper edge connection
             height: 96, // Fixed height for proper edge connection
           },
-          draggable: session?.user?.role !== 'VIEWER',
-          selectable: session?.user?.role !== 'VIEWER',
+          draggable: session?.user?.role !== 'VIEWER' && !isDrawingMode,
+          selectable: session?.user?.role !== 'VIEWER' && !isDrawingMode,
         })
       })
     }
@@ -760,7 +891,7 @@ function MapContentInner() {
     
     setNodes(flowNodes)
     setEdges(flowEdges)
-  }, [data, layoutData, connectionsData, setNodes, setEdges, session, editMode, handleLabelChange, deleteSelectedNode, handleWaypointDrag, handleAddWaypoint, handleRemoveWaypoint])
+  }, [data, layoutData, connectionsData, setNodes, setEdges, session, editMode, isDrawingMode, drawingSourceId, handleLabelChange, deleteSelectedNode, handleWaypointDrag, handleAddWaypoint, handleRemoveWaypoint, startDrawingConnection, finalizeConnection])
   
   if (error) {
     return (
@@ -779,7 +910,12 @@ function MapContentInner() {
   }
   
   return (
-    <div className="h-screen w-full">
+    <div 
+      className="h-screen w-full relative"
+      onMouseMove={handleMouseMove}
+      onClick={handleCanvasClick}
+      ref={mapContainerRef}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -791,9 +927,9 @@ function MapContentInner() {
         fitView
         minZoom={0.1}
         maxZoom={4}
-        nodesDraggable={session?.user?.role !== 'VIEWER'}
+        nodesDraggable={session?.user?.role !== 'VIEWER' && !isDrawingMode}
         nodesConnectable={false}
-        elementsSelectable={session?.user?.role !== 'VIEWER'}
+        elementsSelectable={session?.user?.role !== 'VIEWER' && !isDrawingMode}
         deleteKeyCode={session?.user?.role !== 'VIEWER' ? 'Delete' : null}
         onNodesDelete={(nodes) => {
           if (session?.user?.role !== 'VIEWER') {
@@ -1164,6 +1300,101 @@ function MapContentInner() {
               </div>
             </div>
           </Panel>
+        )}
+        
+        {/* Drawing Mode Preview Overlay */}
+        {isDrawingMode && drawingSourceId && mousePosition && (
+          <svg
+            className="absolute inset-0 pointer-events-none z-50"
+            style={{ width: '100%', height: '100%' }}
+          >
+            <defs>
+              <linearGradient id="drawing-gradient">
+                <stop offset="0%" stopColor="#39FF14" />
+                <stop offset="100%" stopColor="#39FF14" />
+              </linearGradient>
+            </defs>
+            
+            {(() => {
+              // Get source device position
+              const sourceDevice = data?.devices?.find(d => d.id === drawingSourceId)
+              if (!sourceDevice) return null
+              
+              // Convert device position to screen coordinates
+              const sourceScreenPos = reactFlowInstance.flowToScreenPosition({
+                x: sourceDevice.positionX + 48, // Center of 96px node
+                y: sourceDevice.positionY + 48
+              })
+              
+              // Convert mouse position to screen coordinates
+              const mouseScreenPos = reactFlowInstance.flowToScreenPosition(mousePosition)
+              
+              // Build path through waypoints to mouse
+              let pathData = `M ${sourceScreenPos.x} ${sourceScreenPos.y}`
+              
+              // Add waypoints
+              drawingWaypoints.forEach(waypoint => {
+                const waypointScreen = reactFlowInstance.flowToScreenPosition(waypoint)
+                pathData += ` L ${waypointScreen.x} ${waypointScreen.y}`
+              })
+              
+              // Add line to mouse cursor
+              pathData += ` L ${mouseScreenPos.x} ${mouseScreenPos.y}`
+              
+              return (
+                <>
+                  {/* Preview line */}
+                  <path
+                    d={pathData}
+                    stroke="url(#drawing-gradient)"
+                    strokeWidth={4}
+                    fill="none"
+                    strokeDasharray="8 4"
+                    opacity={0.8}
+                    style={{
+                      filter: 'drop-shadow(0 0 8px rgba(57, 255, 20, 0.6))'
+                    }}
+                  />
+                  
+                  {/* Waypoint markers */}
+                  {drawingWaypoints.map((waypoint, index) => {
+                    const waypointScreen = reactFlowInstance.flowToScreenPosition(waypoint)
+                    return (
+                      <circle
+                        key={index}
+                        cx={waypointScreen.x}
+                        cy={waypointScreen.y}
+                        r={6}
+                        fill="#39FF14"
+                        stroke="white"
+                        strokeWidth={2}
+                        style={{
+                          filter: 'drop-shadow(0 0 4px rgba(57, 255, 20, 0.8))'
+                        }}
+                      />
+                    )
+                  })}
+                </>
+              )
+            })()}
+          </svg>
+        )}
+        
+        {/* Drawing Mode Instructions */}
+        {isDrawingMode && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+            <div className="bg-gray-900/95 backdrop-blur-md text-white px-4 py-2 rounded-lg shadow-2xl border border-gray-700/50">
+              <div className="text-sm font-semibold mb-1">🎨 Drawing Mode Active</div>
+              <div className="text-xs text-gray-300 space-y-0.5">
+                <div>• Click empty space to add waypoint</div>
+                <div>• Click target device to finish</div>
+                <div>• Press ESC or Right-Click to cancel</div>
+              </div>
+              <div className="mt-2 text-xs text-lime-400">
+                Waypoints: {drawingWaypoints.length}
+              </div>
+            </div>
+          </div>
         )}
       </ReactFlow>
       

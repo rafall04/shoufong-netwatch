@@ -43,10 +43,14 @@ interface DeviceNodeData {
   statusSince?: string
   onClick?: (e?: React.MouseEvent) => void
   onContextMenu?: (e: React.MouseEvent) => void
+  onStartDrawing?: () => void
+  onFinalizeDrawing?: () => void
+  isDrawingMode?: boolean
+  isDrawingSource?: boolean
 }
 
 const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
-  const { name, status, type, ip, statusSince, onClick, onContextMenu } = data
+  const { name, status, type, ip, statusSince, onClick, onContextMenu, onStartDrawing, onFinalizeDrawing, isDrawingMode, isDrawingSource } = data
   const [showTooltip, setShowTooltip] = useState(false)
   const [timeSince, setTimeSince] = useState<string | null>(null)
   const [isMounted, setIsMounted] = useState(false)
@@ -157,13 +161,31 @@ const DeviceNode = ({ data }: NodeProps<DeviceNodeData>) => {
 
   return (
     <div 
-      className="flex flex-col items-center gap-1 cursor-pointer relative group"
+      className={`flex flex-col items-center gap-1 cursor-pointer relative group ${
+        isDrawingMode ? (isDrawingSource ? 'ring-4 ring-lime-500 rounded-2xl' : 'ring-2 ring-blue-400 rounded-2xl') : ''
+      }`}
       style={{
         width: '96px', // Fixed width for ReactFlow calculations (80px + padding)
         height: '96px', // Fixed height for ReactFlow calculations
       }}
       onClick={(e) => {
-        if (onClick) onClick(e)
+        e.stopPropagation()
+        if (isDrawingMode) {
+          if (isDrawingSource) {
+            // Can't connect to self
+            return
+          }
+          if (onFinalizeDrawing) {
+            onFinalizeDrawing()
+          }
+        } else {
+          if (onStartDrawing) {
+            onStartDrawing()
+          }
+          if (onClick) {
+            onClick(e)
+          }
+        }
       }}
       onContextMenu={(e) => {
         e.preventDefault()

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { sourceId, targetId, label, type, animated } = body
+    const { sourceId, targetId, label, type, animated, waypoints } = body
 
     // Validate required fields
     if (!sourceId || !targetId) {
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create connection
+    // Create connection with waypoints support
     const connection = await prisma.deviceConnection.create({
       data: {
         sourceId,
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
         label: label || null,
         type: type || 'LAN',
         animated: animated !== undefined ? animated : true,
-        waypoints: null // Will be set later via edit
+        waypoints: (waypoints && waypoints.length > 0) ? JSON.stringify(waypoints) : null
       }
     })
 
