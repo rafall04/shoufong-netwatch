@@ -24,7 +24,7 @@ import LayoutNode from '@/components/LayoutNode'
 import ConnectionEdge from '@/components/ConnectionEdge'
 import ConnectionFormModal from '@/components/ConnectionFormModal'
 import ConnectionEditModal from '@/components/ConnectionEditModal'
-import { Plus, Square, Box, Minus, Type, X, Clock, RefreshCw, Info, Router, Tablet, ScanBarcode, Tv, Copy, Eye, Maximize2, Minimize2, Monitor, Laptop, Printer, Video, Server, Smartphone, Network, Wifi, HelpCircle, Link2, Trash2, Edit } from 'lucide-react'
+import { Plus, Square, Box, Minus, Type, X, Clock, RefreshCw, Info, Router, Tablet, ScanBarcode, Tv, Copy, Eye, Maximize2, Minimize2, Monitor, Laptop, Printer, Video, Server, Smartphone, Network, Wifi, HelpCircle, Link2, Trash2, Edit, Lock, Unlock } from 'lucide-react'
 import StatusHistoryTimeline from '@/components/StatusHistoryTimeline'
 
 interface Device {
@@ -124,6 +124,7 @@ function MapContentInner() {
   const [showConnectionsPanel, setShowConnectionsPanel] = useState(false)
   const [editingConnection, setEditingConnection] = useState<DeviceConnection | null>(null)
   const [editMode, setEditMode] = useState(false)
+  const [isLocked, setIsLocked] = useState(false) // Lock/unlock nodes
   const reactFlowInstance = useReactFlow()
   
   // Manual Cable Drawing State
@@ -802,8 +803,8 @@ function MapContentInner() {
             height: element.height,
             zIndex: -1,
           },
-          draggable: session?.user?.role !== 'VIEWER',
-          selectable: session?.user?.role !== 'VIEWER',
+          draggable: session?.user?.role !== 'VIEWER' && !isLocked,
+          selectable: session?.user?.role !== 'VIEWER' && !isLocked,
         })
       })
     }
@@ -852,8 +853,8 @@ function MapContentInner() {
             width: 48, // Compact with forced overlap
             height: 48, // Tight vertical space
           },
-          draggable: session?.user?.role !== 'VIEWER' && !isDrawingMode,
-          selectable: session?.user?.role !== 'VIEWER' && !isDrawingMode,
+          draggable: session?.user?.role !== 'VIEWER' && !isDrawingMode && !isLocked,
+          selectable: session?.user?.role !== 'VIEWER' && !isDrawingMode && !isLocked,
         })
       })
     }
@@ -941,9 +942,9 @@ function MapContentInner() {
         fitView
         minZoom={0.1}
         maxZoom={4}
-        nodesDraggable={session?.user?.role !== 'VIEWER' && !isDrawingMode}
+        nodesDraggable={session?.user?.role !== 'VIEWER' && !isDrawingMode && !isLocked}
         nodesConnectable={false}
-        elementsSelectable={session?.user?.role !== 'VIEWER' && !isDrawingMode}
+        elementsSelectable={session?.user?.role !== 'VIEWER' && !isDrawingMode && !isLocked}
         deleteKeyCode={session?.user?.role !== 'VIEWER' ? 'Delete' : null}
         onNodesDelete={(nodes) => {
           if (session?.user?.role !== 'VIEWER') {
@@ -962,10 +963,30 @@ function MapContentInner() {
           }
         }}
       >
-        <Controls position="top-left" />
+        <Controls position="top-left" showInteractive={false} />
+        
+        {/* Custom Lock/Unlock Button - Connected to state */}
+        {session?.user?.role !== 'VIEWER' && (
+          <Panel position="top-left" className="bg-white/95 backdrop-blur-md border border-slate-200 p-1.5 rounded-2xl shadow-lg" style={{ marginTop: '120px' }}>
+            <button
+              onClick={() => setIsLocked(!isLocked)}
+              className={`w-8 h-8 flex items-center justify-center transition-colors rounded-lg ${
+                isLocked ? 'bg-slate-100 text-slate-700' : 'hover:bg-slate-100 text-slate-700'
+              }`}
+              title={isLocked ? 'Unlock (Enable Dragging)' : 'Lock (Disable Dragging)'}
+              aria-label={isLocked ? 'Unlock nodes' : 'Lock nodes'}
+            >
+              {isLocked ? (
+                <Lock className="w-4 h-4" strokeWidth={1.5} />
+              ) : (
+                <Unlock className="w-4 h-4" strokeWidth={1.5} />
+              )}
+            </button>
+          </Panel>
+        )}
         
         {/* Floating Island - Fullscreen Button */}
-        <Panel position="top-left" className="bg-white/95 backdrop-blur-md border border-slate-200 p-1.5 rounded-2xl shadow-lg" style={{ marginTop: '128px' }}>
+        <Panel position="top-left" className="bg-white/95 backdrop-blur-md border border-slate-200 p-1.5 rounded-2xl shadow-lg" style={{ marginTop: '168px' }}>
           <button
             onClick={toggleFullscreen}
             className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 transition-colors rounded-lg"
@@ -982,7 +1003,7 @@ function MapContentInner() {
         
         {/* Floating Island - Connections Button */}
         {session?.user?.role !== 'VIEWER' && (
-          <Panel position="top-left" className="bg-white/95 backdrop-blur-md border border-slate-200 p-1.5 rounded-2xl shadow-lg" style={{ marginTop: '176px' }}>
+          <Panel position="top-left" className="bg-white/95 backdrop-blur-md border border-slate-200 p-1.5 rounded-2xl shadow-lg" style={{ marginTop: '216px' }}>
             <button
               onClick={() => setShowConnectionsPanel(!showConnectionsPanel)}
               className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 transition-colors rounded-lg"
@@ -996,7 +1017,7 @@ function MapContentInner() {
         
         {/* Connections Panel - Floating Island */}
         {showConnectionsPanel && session?.user?.role !== 'VIEWER' && (
-          <Panel position="top-left" className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl" style={{ marginTop: '224px' }}>
+          <Panel position="top-left" className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl" style={{ marginTop: '264px' }}>
             <div className="p-3 w-64">
               <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-3">
                 <span className="text-sm font-semibold text-slate-900">Connections</span>
