@@ -201,6 +201,8 @@ function MapContentInner() {
   const startDrawingConnection = useCallback((sourceId: string) => {
     if (session?.user?.role === 'VIEWER') return
     
+    console.log('🎨 Drawing mode started - Source:', sourceId)
+    
     setIsDrawingMode(true)
     setDrawingSourceId(sourceId)
     setDrawingWaypoints([])
@@ -219,32 +221,30 @@ function MapContentInner() {
     setMousePosition(position)
   }, [isDrawingMode, reactFlowInstance])
   
-  // Handle canvas click - add waypoint or finalize connection
-  const handleCanvasClick = useCallback((event: React.MouseEvent) => {
+  // Handle canvas click - CRITICAL: Add waypoint, DO NOT terminate
+  const handleCanvasClick = useCallback((event: React.MouseEvent | MouseEvent) => {
     if (!isDrawingMode || !reactFlowInstance) return
     
-    // Check if clicked on a node (target)
-    const target = event.target as HTMLElement
-    
-    // Check if clicked on ReactFlow pane (background)
-    const isPane = target.classList.contains('react-flow__pane')
-    
-    if (!isPane) {
-      // Clicked on something else (node, edge, etc) - ignore
-      return
-    }
-    
-    // Add waypoint at click position
+    // CRITICAL: Add waypoint at click position
+    // This MUST NOT terminate the connection
+    // Drawing state remains TRUE
     const position = reactFlowInstance.screenToFlowPosition({
-      x: event.clientX,
-      y: event.clientY
+      x: (event as MouseEvent).clientX,
+      y: (event as MouseEvent).clientY
     })
     
+    console.log('✅ Waypoint added:', position, 'Total waypoints:', drawingWaypoints.length + 1)
+    
     setDrawingWaypoints(prev => [...prev, position])
-  }, [isDrawingMode, reactFlowInstance])
+    
+    // IMPORTANT: Do NOT call cancelDrawing() or finalizeConnection() here
+    // Connection only finalizes when clicking a target node
+  }, [isDrawingMode, reactFlowInstance, drawingWaypoints.length])
   
   // Cancel drawing mode
   const cancelDrawing = useCallback(() => {
+    console.log('❌ Drawing mode cancelled')
+    
     setIsDrawingMode(false)
     setDrawingSourceId(null)
     setDrawingWaypoints([])
@@ -254,6 +254,12 @@ function MapContentInner() {
   // Finalize connection with target node
   const finalizeConnection = useCallback(async (targetId: string) => {
     if (!drawingSourceId) return
+    
+    console.log('✅ Finalizing connection:', {
+      source: drawingSourceId,
+      target: targetId,
+      waypoints: drawingWaypoints.length
+    })
     
     try {
       // Create connection with waypoints
@@ -275,13 +281,15 @@ function MapContentInner() {
         throw new Error(result.error || 'Failed to create connection')
       }
       
+      console.log('✅ Connection created successfully')
+      
       // Refresh connections
       await mutateConnections()
       
       // Reset drawing state
       cancelDrawing()
     } catch (error: any) {
-      console.error('Error creating connection:', error)
+      console.error('❌ Error creating connection:', error)
       alert(error.message || 'Failed to create connection')
     }
   }, [drawingSourceId, drawingWaypoints, mutateConnections, cancelDrawing])
@@ -922,6 +930,7 @@ function MapContentInner() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
+        onPaneClick={handleCanvasClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -1343,7 +1352,7 @@ function MapContentInner() {
               
               return (
                 <>
-                  {/* Preview line */}
+                  {/* Preview line - Multi-segment polyline */}
                   <path
                     d={pathData}
                     stroke="url(#drawing-gradient)"
@@ -1351,27 +1360,52 @@ function MapContentInner() {
                     fill="none"
                     strokeDasharray="8 4"
                     opacity={0.8}
+                    className="animate-dash"
                     style={{
                       filter: 'drop-shadow(0 0 8px rgba(57, 255, 20, 0.6))'
                     }}
                   />
                   
-                  {/* Waypoint markers */}
+                  {/* Glow layer for better visibility */}
+                  <path
+                    d={pathData}
+                    stroke="#39FF14"
+                    strokeWidth={8}
+                    fill="none"
+                    opacity={0.2}
+                    style={{
+                      filter: 'blur(4px)'
+                    }}
+                  />
+                  
+                  {/* Waypoint markers with numbers */}
                   {drawingWaypoints.map((waypoint, index) => {
                     const waypointScreen = reactFlowInstance.flowToScreenPosition(waypoint)
                     return (
-                      <circle
-                        key={index}
-                        cx={waypointScreen.x}
-                        cy={waypointScreen.y}
-                        r={6}
-                        fill="#39FF14"
-                        stroke="white"
-                        strokeWidth={2}
-                        style={{
-                          filter: 'drop-shadow(0 0 4px rgba(57, 255, 20, 0.8))'
-                        }}
-                      />
+                      <g key={index}>
+                        <circle
+                          cx={waypointScreen.x}
+                          cy={waypointScreen.y}
+                          r={8}
+                          fill="#39FF14"
+                          stroke="white"
+                          strokeWidth={2}
+                          style={{
+                            filter: 'drop-shadow(0 0 4px rgba(57, 255, 20, 0.8))'
+                          }}
+                        />
+                        <text
+                          x={waypointScreen.x}
+                          y={waypointScreen.y}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="white"
+                          fontSize="10"
+                          fontWeight="bold"
+                        >
+                          {index + 1}
+                        </text>
+                      </g>
                     )
                   })}
                 </>

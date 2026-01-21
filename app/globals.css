@@ -30,6 +30,20 @@
     will-change: transform;
   }
   
+  /* Animated dashed line for drawing mode */
+  @keyframes dash-animation {
+    0% {
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dashoffset: -24;
+    }
+  }
+  
+  .animate-dash {
+    animation: dash-animation 1s linear infinite;
+  }
+  
   /* Glassmorphism support */
   @supports (backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px)) {
     .backdrop-blur-sm {
