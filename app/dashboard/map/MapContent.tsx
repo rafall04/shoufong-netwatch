@@ -1673,10 +1673,34 @@ function MapContentInner() {
       {/* Device Popup */}
       {selectedDevice && devicePopupPosition && (
         <div
-          className="fixed z-50 bg-white rounded-lg shadow-xl border-2 border-gray-200 w-80"
+          className="fixed z-50 bg-white rounded-lg shadow-xl border-2 border-gray-200 w-80 max-h-[80vh] overflow-y-auto"
           style={{
-            left: devicePopupPosition.x + 10,
-            top: devicePopupPosition.y + 10,
+            left: (() => {
+              const popupWidth = 320 // 80 * 4 (w-80 = 20rem = 320px)
+              const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920
+              const clickX = devicePopupPosition.x
+              
+              // If popup would go off right edge, position it to the left of click
+              if (clickX + popupWidth + 10 > viewportWidth) {
+                return Math.max(10, clickX - popupWidth - 10)
+              }
+              
+              // Otherwise position to the right of click
+              return Math.min(clickX + 10, viewportWidth - popupWidth - 10)
+            })(),
+            top: (() => {
+              const popupMaxHeight = typeof window !== 'undefined' ? window.innerHeight * 0.8 : 600
+              const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080
+              const clickY = devicePopupPosition.y
+              
+              // If popup would go off bottom edge, position it above click
+              if (clickY + popupMaxHeight + 10 > viewportHeight) {
+                return Math.max(10, viewportHeight - popupMaxHeight - 10)
+              }
+              
+              // Otherwise position below click
+              return Math.min(clickY + 10, viewportHeight - popupMaxHeight - 10)
+            })(),
           }}
         >
           <div className="flex items-center justify-between p-3 border-b bg-gray-50">
@@ -1687,6 +1711,8 @@ function MapContentInner() {
                 setDevicePopupPosition(null)
               }}
               className="text-gray-400 hover:text-gray-600"
+              title="Close"
+              aria-label="Close popup"
             >
               <X className="w-4 h-4" />
             </button>
