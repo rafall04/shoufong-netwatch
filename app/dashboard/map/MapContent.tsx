@@ -41,6 +41,7 @@ interface Device {
   lastSeen: string | null
   statusSince: string | null
   roomId: string | null
+  needsSync?: boolean // Flag for manual sync
   room?: {
     id: string
     name: string

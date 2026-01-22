@@ -44,6 +44,7 @@ model Device {
   positionY       Float      @default(0)
   lastSeen        DateTime?
   statusSince     DateTime?  // When status last changed
+  needsSync       Boolean    @default(false) // Flag for manual sync to MikroTik
   // Netwatch Configuration (MikroTik ICMP only)
   netwatchTimeout Int        @default(1000) // milliseconds (default: 1000ms = 1s)
   netwatchInterval Int       @default(5)    // seconds (default: 5s)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { DEVICE_TYPES, isValidDeviceType } from '@/lib/constants'
+import { syncDeviceToMikroTik } from '@/lib/mikrotik-sync'
 
 export const dynamic = 'force-dynamic'
 
@@ -131,12 +132,65 @@ export async function PUT(
         netwatchTimeout: netwatchTimeout !== undefined ? netwatchTimeout : 1000,
         netwatchInterval: netwatchInterval !== undefined ? netwatchInterval : 5,
         netwatchUpScript: netwatchUpScript || null,
-        netwatchDownScript: netwatchDownScript || null
+        netwatchDownScript: netwatchDownScript || null,
+        needsSync: false // Reset sync flag
       },
       include: {
         room: true
       }
     })
+    
+    // Auto-sync to MikroTik if IP or netwatch config changed
+    const ipChanged = ip !== existingDevice.ip
+    const configChanged = 
+      name !== existingDevice.name ||
+      netwatchTimeout !== existingDevice.netwatchTimeout ||
+      netwatchInterval !== existingDevice.netwatchInterval ||
+      netwatchUpScript !== existingDevice.netwatchUpScript ||
+      netwatchDownScript !== existingDevice.netwatchDownScript
+    
+    if (ipChanged || configChanged) {
+      try {
+        const syncResult = await syncDeviceToMikroTik(
+          updatedDevice,
+          ipChanged ? existingDevice.ip : undefined
+        )
+        
+        if (syncResult.success) {
+          return NextResponse.json({
+            success: true,
+            device: updatedDevice,
+            message: `Device updated successfully. ${syncResult.message}`
+          })
+        } else {
+          // Sync failed, mark for manual sync
+          await prisma.device.update({
+            where: { id },
+            data: { needsSync: true }
+          })
+          
+          return NextResponse.json({
+            success: true,
+            device: { ...updatedDevice, needsSync: true },
+            warning: `Device updated but MikroTik sync failed: ${syncResult.message}. Please sync manually.`
+          })
+        }
+      } catch (error: any) {
+        console.error('Error syncing to MikroTik:', error)
+        
+        // Mark for manual sync
+        await prisma.device.update({
+          where: { id },
+          data: { needsSync: true }
+        })
+        
+        return NextResponse.json({
+          success: true,
+          device: { ...updatedDevice, needsSync: true },
+          warning: 'Device updated but MikroTik sync failed. Please sync manually from device list.'
+        })
+      }
+    }
     
     return NextResponse.json({
       success: true,
