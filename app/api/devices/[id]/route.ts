@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { DEVICE_TYPES, isValidDeviceType } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * PUT /api/devices/[id]
+ * Update device configuration
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -12,97 +17,133 @@ export async function PUT(
     // Check authentication
     const session = await auth()
     
-    if (!session || !session.user) {
+    if (!session) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
-
-    // Check role (ADMIN or OPERATOR only)
-    const userRole = session.user.role
-    if (userRole !== 'ADMIN' && userRole !== 'OPERATOR') {
+    
+    // Check role - only ADMIN and OPERATOR can update devices
+    if (session.user.role === 'VIEWER') {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
         { status: 403 }
       )
     }
-
-    // Get device ID from params
-    const { id } = params
-
-    // Validate device exists
-    const existingDevice = await prisma.device.findUnique({
-      where: { id }
-    })
-
-    if (!existingDevice) {
-      return NextResponse.json(
-        { error: 'Device not found' },
-        { status: 404 }
-      )
-    }
-
-    // Parse request body
+    
+    const id = params.id
     const body = await request.json()
     const { 
       name, 
       ip, 
       type, 
-      laneName, 
+      laneName,
       roomId,
       netwatchTimeout,
       netwatchInterval,
       netwatchUpScript,
       netwatchDownScript
     } = body
-
-    // Validate device type if provided
-    if (type) {
-      const validTypes = ['ROUTER', 'TABLET', 'SCANNER_GTEX', 'SMART_TV']
-      if (!validTypes.includes(type)) {
-        return NextResponse.json(
-          { error: 'Invalid device type' },
-          { status: 400 }
-        )
-      }
+    
+    // Validate required fields
+    if (!name || !ip || !type || !laneName) {
+      return NextResponse.json(
+        { error: 'Name, IP, type, and lane name are required' },
+        { status: 400 }
+      )
     }
-
-    // Check IP uniqueness if IP is being updated
-    if (ip && ip !== existingDevice.ip) {
-      const deviceWithIp = await prisma.device.findUnique({
+    
+    // Validate device type
+    if (!isValidDeviceType(type)) {
+      return NextResponse.json(
+        { 
+          error: 'Invalid device type',
+          details: `Type must be one of: ${DEVICE_TYPES.join(', ')}`
+        },
+        { status: 400 }
+      )
+    }
+    
+    // Validate IP format
+    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/
+    if (!ipRegex.test(ip)) {
+      return NextResponse.json(
+        { error: 'Invalid IP address format' },
+        { status: 400 }
+      )
+    }
+    
+    // Check if device exists
+    const existingDevice = await prisma.device.findUnique({
+      where: { id }
+    })
+    
+    if (!existingDevice) {
+      return NextResponse.json(
+        { error: 'Device not found' },
+        { status: 404 }
+      )
+    }
+    
+    // Check IP uniqueness (if IP changed)
+    if (ip !== existingDevice.ip) {
+      const ipExists = await prisma.device.findUnique({
         where: { ip }
       })
-
-      if (deviceWithIp) {
+      
+      if (ipExists) {
         return NextResponse.json(
           { error: 'IP address already exists' },
           { status: 400 }
         )
       }
     }
-
-    // Update device fields
-    const updateData: any = {}
-    if (name !== undefined) updateData.name = name
-    if (ip !== undefined) updateData.ip = ip
-    if (type !== undefined) updateData.type = type
-    if (laneName !== undefined) updateData.laneName = laneName
-    if (roomId !== undefined) updateData.roomId = roomId
-    if (netwatchTimeout !== undefined) updateData.netwatchTimeout = netwatchTimeout
-    if (netwatchInterval !== undefined) updateData.netwatchInterval = netwatchInterval
-    if (netwatchUpScript !== undefined) updateData.netwatchUpScript = netwatchUpScript
-    if (netwatchDownScript !== undefined) updateData.netwatchDownScript = netwatchDownScript
-
+    
+    // Validate netwatch settings if provided
+    if (netwatchTimeout !== undefined) {
+      if (netwatchTimeout < 100 || netwatchTimeout > 10000) {
+        return NextResponse.json(
+          { error: 'Netwatch timeout must be between 100ms and 10000ms' },
+          { status: 400 }
+        )
+      }
+    }
+    
+    if (netwatchInterval !== undefined) {
+      if (netwatchInterval < 5 || netwatchInterval > 3600) {
+        return NextResponse.json(
+          { error: 'Netwatch interval must be between 5s and 3600s' },
+          { status: 400 }
+        )
+      }
+    }
+    
+    // Update device
     const updatedDevice = await prisma.device.update({
       where: { id },
-      data: updateData,
+      data: {
+        name,
+        ip,
+        type,
+        laneName,
+        roomId: roomId || null,
+        netwatchTimeout: netwatchTimeout !== undefined ? netwatchTimeout : 1000,
+        netwatchInterval: netwatchInterval !== undefined ? netwatchInterval : 5,
+        netwatchUpScript: netwatchUpScript || null,
+        netwatchDownScript: netwatchDownScript || null
+      },
       include: {
         room: true
       }
     })
-
-    return NextResponse.json({ device: updatedDevice })
+    
+    return NextResponse.json({
+      success: true,
+      device: updatedDevice,
+      message: 'Device updated successfully'
+    })
+    
   } catch (error) {
     console.error('Error updating device:', error)
     return NextResponse.json(
@@ -112,6 +153,10 @@ export async function PUT(
   }
 }
 
+/**
+ * DELETE /api/devices/[id]
+ * Delete device
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -120,43 +165,45 @@ export async function DELETE(
     // Check authentication
     const session = await auth()
     
-    if (!session || !session.user) {
+    if (!session) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
-
-    // Check role (ADMIN or OPERATOR only)
-    const userRole = session.user.role
-    if (userRole !== 'ADMIN' && userRole !== 'OPERATOR') {
+    
+    // Check role - only ADMIN can delete devices
+    if (session.user.role !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Insufficient permissions' },
+        { error: 'Only administrators can delete devices' },
         { status: 403 }
       )
     }
-
-    // Get device ID from params
-    const { id } = params
-
-    // Validate device exists
+    
+    const id = params.id
+    
+    // Check if device exists
     const existingDevice = await prisma.device.findUnique({
       where: { id }
     })
-
+    
     if (!existingDevice) {
       return NextResponse.json(
         { error: 'Device not found' },
         { status: 404 }
       )
     }
-
-    // Delete device from database
+    
+    // Delete device
     await prisma.device.delete({
       where: { id }
     })
-
-    return NextResponse.json({ success: true })
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Device deleted successfully'
+    })
+    
   } catch (error) {
     console.error('Error deleting device:', error)
     return NextResponse.json(
