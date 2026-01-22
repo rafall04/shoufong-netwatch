@@ -153,8 +153,10 @@ if (!isValidDeviceType(type)) {
    - `app/dashboard/map/MapContent.tsx`
 
 2. **API Routes:**
-   - `app/api/devices/route.ts`
-   - `app/api/device/update/route.ts`
+   - `app/api/devices/route.ts` (GET, POST)
+   - `app/api/devices/[id]/route.ts` (PUT, DELETE)
+   - `app/api/device/update/route.ts` (POST - alternative update endpoint)
+   - `app/api/device/move/route.ts` (POST - update position only)
    - `app/api/mikrotik/sync-devices/route.ts`
 
 3. **Types/Interfaces:**
