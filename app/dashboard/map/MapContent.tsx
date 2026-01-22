@@ -24,7 +24,8 @@ import LayoutNode from '@/components/LayoutNode'
 import ConnectionEdge from '@/components/ConnectionEdge'
 import ConnectionFormModal from '@/components/ConnectionFormModal'
 import ConnectionEditModal from '@/components/ConnectionEditModal'
-import { Plus, Square, Box, Minus, Type, X, Clock, RefreshCw, Info, Router, Tablet, ScanBarcode, Tv, Copy, Eye, Maximize2, Minimize2, Monitor, Laptop, Printer, Video, Server, Smartphone, Network, Wifi, HelpCircle, Link2, Trash2, Edit, Lock, Unlock } from 'lucide-react'
+import DeviceFormModal from '@/components/DeviceFormModal'
+import { Plus, Square, Box, Minus, Type, X, Clock, RefreshCw, Info, Router, Tablet, ScanBarcode, Tv, Copy, Eye, Maximize2, Minimize2, Monitor, Laptop, Printer, Video, Server, Smartphone, Network, Wifi, HelpCircle, Link2, Trash2, Edit, Lock, Unlock, Download, Upload } from 'lucide-react'
 import StatusHistoryTimeline from '@/components/StatusHistoryTimeline'
 
 interface Device {
@@ -125,6 +126,8 @@ function MapContentInner() {
   const [editingConnection, setEditingConnection] = useState<DeviceConnection | null>(null)
   const [editMode, setEditMode] = useState(false)
   const [isLocked, setIsLocked] = useState(false) // Lock/unlock nodes
+  const [editingDevice, setEditingDevice] = useState<Device | null>(null) // Device edit modal
+  const [showDeviceModal, setShowDeviceModal] = useState(false) // Control modal visibility
   const reactFlowInstance = useReactFlow()
   
   // Manual Cable Drawing State
@@ -405,6 +408,94 @@ function MapContentInner() {
       throw error
     }
   }, [mutateConnections])
+  
+  // Handle device edit success
+  const handleDeviceEditSuccess = useCallback(async () => {
+    // Refresh devices data
+    await mutate()
+    
+    // Close modal and popup
+    setShowDeviceModal(false)
+    setEditingDevice(null)
+    setSelectedDevice(null)
+    setDevicePopupPosition(null)
+  }, [mutate])
+  
+  // Export layout
+  const handleExportLayout = useCallback(async () => {
+    try {
+      const response = await fetch('/api/layout/export')
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to export layout')
+      }
+      
+      // Create download link
+      const dataStr = JSON.stringify(result, null, 2)
+      const dataBlob = new Blob([dataStr], { type: 'application/json' })
+      const url = URL.createObjectURL(dataBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `layout-export-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      
+      alert('Layout berhasil di-export!')
+    } catch (error: any) {
+      console.error('Error exporting layout:', error)
+      alert(error.message || 'Gagal export layout')
+    }
+  }, [])
+  
+  // Import layout
+  const handleImportLayout = useCallback(async () => {
+    try {
+      // Create file input
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = '.json'
+      
+      input.onchange = async (e: any) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        
+        try {
+          const text = await file.text()
+          const layoutData = JSON.parse(text)
+          
+          // Send to import API
+          const response = await fetch('/api/layout/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(layoutData)
+          })
+          
+          const result = await response.json()
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to import layout')
+          }
+          
+          // Refresh data
+          await mutate()
+          await mutateLayout()
+          
+          alert(`Layout berhasil di-import!\n${result.message || ''}`)
+        } catch (error: any) {
+          console.error('Error importing layout:', error)
+          alert(error.message || 'Gagal import layout')
+        }
+      }
+      
+      input.click()
+    } catch (error: any) {
+      console.error('Error importing layout:', error)
+      alert(error.message || 'Gagal import layout')
+    }
+  }, [mutate, mutateLayout])
   
   // Delete connection
   const handleDeleteConnection = useCallback(async (connectionId: string) => {
@@ -1047,9 +1138,37 @@ function MapContentInner() {
           </Panel>
         )}
         
+        {/* Floating Island - Export Layout Button */}
+        {session?.user?.role !== 'VIEWER' && (
+          <Panel position="top-left" className="bg-white/95 backdrop-blur-md border border-slate-200 p-1.5 rounded-2xl shadow-lg" style={{ marginTop: '264px' }}>
+            <button
+              onClick={handleExportLayout}
+              className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 transition-colors rounded-lg"
+              title="Export Layout"
+              aria-label="Export Layout"
+            >
+              <Download className="w-4 h-4 text-slate-700" strokeWidth={1.5} />
+            </button>
+          </Panel>
+        )}
+        
+        {/* Floating Island - Import Layout Button */}
+        {session?.user?.role !== 'VIEWER' && (
+          <Panel position="top-left" className="bg-white/95 backdrop-blur-md border border-slate-200 p-1.5 rounded-2xl shadow-lg" style={{ marginTop: '312px' }}>
+            <button
+              onClick={handleImportLayout}
+              className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 transition-colors rounded-lg"
+              title="Import Layout"
+              aria-label="Import Layout"
+            >
+              <Upload className="w-4 h-4 text-slate-700" strokeWidth={1.5} />
+            </button>
+          </Panel>
+        )}
+        
         {/* Connections Panel - Floating Island */}
         {showConnectionsPanel && session?.user?.role !== 'VIEWER' && (
-          <Panel position="top-left" className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl" style={{ marginTop: '264px' }}>
+          <Panel position="top-left" className="bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl" style={{ marginTop: '360px' }}>
             <div className="p-3 w-64">
               <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-3">
                 <span className="text-sm font-semibold text-slate-900">Connections</span>
@@ -1632,6 +1751,22 @@ function MapContentInner() {
               deviceName={selectedDevice.name}
               hours={24}
             />
+            
+            {/* Edit Button - Only for ADMIN and OPERATOR */}
+            {session?.user?.role !== 'VIEWER' && (
+              <div className="pt-2 border-t">
+                <button
+                  onClick={() => {
+                    setEditingDevice(selectedDevice)
+                    setShowDeviceModal(true)
+                  }}
+                  className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  Edit Device
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1663,6 +1798,19 @@ function MapContentInner() {
           }
           onClose={() => setEditingConnection(null)}
           onSubmit={handleUpdateConnection}
+        />
+      )}
+      
+      {/* Device Edit Modal */}
+      {editingDevice && (
+        <DeviceFormModal
+          isOpen={showDeviceModal}
+          device={editingDevice}
+          onClose={() => {
+            setShowDeviceModal(false)
+            setEditingDevice(null)
+          }}
+          onSuccess={handleDeviceEditSuccess}
         />
       )}
     </div>
