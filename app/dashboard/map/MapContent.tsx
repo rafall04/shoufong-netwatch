@@ -27,12 +27,13 @@ import ConnectionEditModal from '@/components/ConnectionEditModal'
 import DeviceFormModal from '@/components/DeviceFormModal'
 import { Plus, Square, Box, Minus, Type, X, Clock, RefreshCw, Info, Router, Tablet, ScanBarcode, Tv, Copy, Eye, Maximize2, Minimize2, Monitor, Laptop, Printer, Video, Server, Smartphone, Network, Wifi, HelpCircle, Link2, Trash2, Edit, Lock, Unlock, Download, Upload } from 'lucide-react'
 import StatusHistoryTimeline from '@/components/StatusHistoryTimeline'
+import { DeviceType } from '@/lib/constants'
 
 interface Device {
   id: string
   name: string
   ip: string
-  type: 'ROUTER' | 'SWITCH' | 'ACCESS_POINT' | 'PC' | 'LAPTOP' | 'TABLET' | 'PRINTER' | 'SCANNER_GTEX' | 'SMART_TV' | 'CCTV' | 'SERVER' | 'PHONE' | 'OTHER'
+  type: DeviceType
   laneName: string
   status: string
   positionX: number

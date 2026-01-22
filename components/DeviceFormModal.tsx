@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { X } from "lucide-react"
+import { DEVICE_TYPES, DEVICE_TYPE_LABELS, DeviceType } from "@/lib/constants"
 
 interface DeviceFormModalProps {
   isOpen: boolean
@@ -341,19 +342,11 @@ export default function DeviceFormModal({
                         errors.type ? "border-red-500 bg-red-50" : "border-gray-300 focus:border-blue-500"
                       }`}
                     >
-                      <option value="ROUTER">Router</option>
-                      <option value="SWITCH">Switch</option>
-                      <option value="ACCESS_POINT">Access Point</option>
-                      <option value="PC">PC / Desktop</option>
-                      <option value="LAPTOP">Laptop</option>
-                      <option value="TABLET">Tablet</option>
-                      <option value="PRINTER">Printer</option>
-                      <option value="SCANNER_GTEX">Scanner (GTEX)</option>
-                      <option value="SMART_TV">Smart TV</option>
-                      <option value="CCTV">CCTV Camera</option>
-                      <option value="SERVER">Server</option>
-                      <option value="PHONE">Phone / Smartphone</option>
-                      <option value="OTHER">Other Device</option>
+                      {DEVICE_TYPES.map(type => (
+                        <option key={type} value={type}>
+                          {DEVICE_TYPE_LABELS[type]}
+                        </option>
+                      ))}
                     </select>
                     {errors.type && (
                       <p className="mt-1 text-sm text-red-600 flex items-center gap-1">

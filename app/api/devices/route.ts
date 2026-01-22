@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { RouterOSAPI } from 'node-routeros'
+import { DEVICE_TYPES, isValidDeviceType } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,15 +83,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate device type
-    const validTypes = [
-      'ROUTER', 'SWITCH', 'ACCESS_POINT', 
-      'PC', 'LAPTOP', 'TABLET', 
-      'PRINTER', 'SCANNER_GTEX', 'SMART_TV', 
-      'CCTV', 'SERVER', 'PHONE', 'OTHER'
-    ]
-    if (!validTypes.includes(type)) {
+    if (!isValidDeviceType(type)) {
       return NextResponse.json(
-        { error: 'Invalid device type' },
+        { 
+          error: 'Invalid device type',
+          details: `Type must be one of: ${DEVICE_TYPES.join(', ')}`
+        },
         { status: 400 }
       )
     }
